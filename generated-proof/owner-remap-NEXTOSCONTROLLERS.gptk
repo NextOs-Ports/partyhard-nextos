@@ -1,0 +1,55 @@
+# NEXTOSCONTROLLERS — controles do NextOS / NextOS controls
+# Formato próprio do NextOS. NÃO é gptokeyb: nunca vira teclado.
+# NextOS own format. NOT gptokeyb: never becomes a keyboard.
+#
+# Edite as ações à direita para trocar os controles. A lista de ações
+# válidas vem do adapter-contract.json do port. Este arquivo é SEU:
+# atualizações do port nunca sobrescrevem a sua cópia editada.
+# Edit the actions on the right to remap. Valid actions come from the
+# port's adapter-contract.json. This file is YOURS: port updates never
+# overwrite your edited copy.
+
+format = NEXTOS_CONTROLLERS/3
+port = partyhard
+
+FACE_LAYOUT = auto
+
+[menu]
+A = partyhard.action1
+B = partyhard.action2
+X = partyhard.action3
+Y = partyhard.action4
+L1 = partyhard.bumper_left
+R1 = partyhard.bumper_right
+L2 = native
+R2 = native
+L3 = native
+R3 = partyhard.click
+START = partyhard.pause
+SELECT = native
+UP = native
+DOWN = native
+LEFT = native
+RIGHT = native
+LEFT_STICK = partyhard.move
+RIGHT_STICK = partyhard.cursor
+
+[gameplay]
+A = null
+B = partyhard.action2
+X = partyhard.action3
+Y = partyhard.action4
+L1 = partyhard.bumper_left
+R1 = partyhard.bumper_right
+L2 = partyhard.action1
+R2 = native
+L3 = native
+R3 = partyhard.click
+START = partyhard.pause
+SELECT = native
+UP = native
+DOWN = native
+LEFT = native
+RIGHT = native
+LEFT_STICK = partyhard.move
+RIGHT_STICK = partyhard.cursor

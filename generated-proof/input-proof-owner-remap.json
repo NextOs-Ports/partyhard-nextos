@@ -1,0 +1,109 @@
+{
+ "schema": "nx-device-input-proof-roteiro/1",
+ "port_id": "partyhard",
+ "generated_by": "nxgenerator 0.3.17",
+ "classification": "ON_DEVICE_AUTOMATED_INPUT_PROOF",
+ "session": "owner-remap",
+ "purpose": "owner copy with A = null and L2 = partyhard.action1 in [gameplay]: same ELF, edited file reaches the engine",
+ "clones": 1,
+ "steps": [
+  {
+   "timeout_s": 900,
+   "wait_log": "context=menu source=gui:screen"
+  },
+  {
+   "sleep_ms": 5000
+  },
+  {
+   "timeout_s": 600,
+   "wait_log": "context=gameplay source=gui:game-screen"
+  },
+  {
+   "sleep_ms": 4000
+  },
+  {
+   "hold": "RIGHT_STICK",
+   "ms": 80,
+   "x": 0.0,
+   "y": 1.0
+  },
+  {
+   "sleep_ms": 1500
+  },
+  {
+   "ms": 150,
+   "press": "R3"
+  },
+  {
+   "sleep_ms": 3000
+  },
+  {
+   "mark": true
+  },
+  {
+   "press": "A",
+   "ms": 150
+  },
+  {
+   "sleep_ms": 1500
+  },
+  {
+   "expect": "suppressed",
+   "context": "gameplay",
+   "control": "A"
+  },
+  {
+   "expect": "no_delivery",
+   "control": "A"
+  },
+  {
+   "mark": true
+  },
+  {
+   "press": "L2",
+   "ms": 150
+  },
+  {
+   "sleep_ms": 1500
+  },
+  {
+   "expect": "delivery",
+   "context": "gameplay",
+   "control": "L2",
+   "action": "partyhard.action1",
+   "sink": "adapter.input.android-keyevent"
+  },
+  {
+   "expect": "count",
+   "kind": "delivery",
+   "control": "L2",
+   "pressed": 1,
+   "value": 1
+  },
+  {
+   "mark": true
+  },
+  {
+   "chord": [
+    "SELECT",
+    "START"
+   ],
+   "ms": 300
+  },
+  {
+   "wait_exit": true,
+   "timeout_s": 60
+  },
+  {
+   "expect": "log",
+   "regex": "SELECT\\+START: lifecycle exit requested|exit-chord"
+  },
+  {
+   "expect": "exit_status",
+   "value": 0
+  },
+  {
+   "expect": "process_gone"
+  }
+ ]
+}
