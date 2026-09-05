@@ -1,8 +1,8 @@
 {
   "schema": "blossomtales-nxinput-vendor-pins/1",
   "nxinput_version": "0.11.8",
-  "framework_commit": "275a8fb47c2f2bf9a452734dec5c33ceb4bd549f",
-  "framework_branch": "port/blossomtales-1.4.5-stretch-settings-cwd",
+  "framework_commit": "657fb65a23b5c3b20040e76307b27e6470b1d17c",
+  "framework_branch": "framework-v5-nxbootstrap-0.8.4-arkos-stale-sdl-20260905",
   "files": {
     "engine-glue/nxc6_glue.c": "3fa8c4ea741a24cd5a02c9015716b4bb4bc843cc3d588bc599f4662ccfeb817b",
     "engine-glue/nxc6_glue.h": "1d9839cbfb4149672cf365de993f035cff86ceb81023bc7211b319bf2be281c6",

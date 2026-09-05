@@ -8,16 +8,16 @@
     "preparation": "streaming UnityFS block extraction"
   },
   "framework": {
-    "commit": "275a8fb47c2f2bf9a452734dec5c33ceb4bd549f",
-    "nxbootstrap": "0.8.2",
+    "commit": "657fb65a23b5c3b20040e76307b27e6470b1d17c",
+    "nxbootstrap": "0.8.4",
     "nxcompat": "0.5.3",
     "nxextract": "1.3.0",
     "nxgenerator": "0.4.5",
     "nxgl": "0.3.5",
     "nxinput": "0.11.8",
-    "nxrelease": "0.4.9",
+    "nxrelease": "0.4.11",
     "nxsplash": "0.1.2",
-    "release_status": "Framework V5 integration pinned by exact commit",
+    "release_status": "Framework V5 immutable ArkOS stale inherited SDL fix; 157 host gates passed, exact package not physically retested",
     "splash_duration_ms": 5000
   },
   "game": {
@@ -29,7 +29,7 @@
     "version": "0.100038"
   },
   "port_id": "partyhard",
-  "port_version": "1.0.2",
+  "port_version": "1.0.4",
   "runtime": {
     "architecture": "aarch64",
     "build_id": "b89955680da653b6e20a5f7646f02637d166a1cd",

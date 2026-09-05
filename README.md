@@ -118,11 +118,20 @@ cd ports/partyhard
 ```
 
 The public runtime is AArch64 and is audited for GLIBC 2.27 or older. Release
-composition uses the V5 integration at commit
-`275a8fb47c2f2bf9a452734dec5c33ceb4bd549f`, including nxbootstrap 0.8.2,
-nxcompat 0.5.3, nxinput 0.11.8, nxgenerator 0.4.5, and nxrelease 0.4.9. Every
+1.0.4 uses the immutable V5 integration tag
+`framework-v5-nxbootstrap-0.8.4-arkos-stale-sdl-20260905`, peeled commit
+`657fb65a23b5c3b20040e76307b27e6470b1d17c`. It includes nxbootstrap 0.8.4,
+nxcompat 0.5.3, nxinput 0.11.8, nxgenerator 0.4.5, and nxrelease 0.4.11. Every
 component tree is pinned in `FRAMEWORK-PIN.json`; the port never follows a
 moving branch or `latest`.
+
+nxbootstrap 0.8.4 fixes the ArkOS/PortMaster system-SDL handoff when an
+inherited `LD_PRELOAD` names a stale SDL through the dynamic-loader token
+`$LIB`. If the adapter did not author a different preload, the bootstrap drops
+only that inherited unresolved system-SDL entry. Valid mapped token paths are
+preserved literally; adapter-authored, private, non-SDL, nested, ambiguous, or
+otherwise unresolved overrides still fail closed. There is no `eval`, path
+guessing, global `LD_PRELOAD` wipe, or private SDL in the package.
 
 Every launch uses the generated framework launcher. After the data gate and
 before the adapter/game, the canonical bilingual `NEXT OS` / `RETRO ELITE`
@@ -130,11 +139,13 @@ NXSplash remains visible for five seconds without a skip option.
 
 ### Physical validation
 
-The exact AArch64 runtime identified above was approved on two independent
-device stacks: NextOS with Mali-450 at 1280x720 and dArkOS with Mali-G31 at
-640x480. Fullscreen video, audio, gameplay, one-step menu D-pad navigation,
-the aligned A/R3 pointer click and SELECT+START exit all passed. Both game
-instances were closed after the test.
+The unchanged AArch64 game runtime identified above was approved on two
+independent device stacks: NextOS with Mali-450 at 1280x720 and dArkOS with
+Mali-G31 at 640x480. Fullscreen video, audio, gameplay, one-step menu D-pad
+navigation, the aligned A/R3 pointer click and SELECT+START exit all passed.
+Release 1.0.4 changes only the generated launcher/framework pin and was gated
+on the host; its exact ZIP has not been physically retested. The 1.0.3
+candidate was invalidated after ArkOS proved its inherited SDL entry was stale.
 
 ### Source map and licenses
 
@@ -246,13 +257,28 @@ Coloque um APK legal e compatível do Party Hard GO 0.100038 em
 dados no aparelho; o nome do arquivo é irrelevante. `INSTALLATION.md` traz a
 identidade exata testada e o layout completo.
 
+### Composição da versão 1.0.4
+
+A versão 1.0.4 fixa a tag imutável
+`framework-v5-nxbootstrap-0.8.4-arkos-stale-sdl-20260905`, commit
+`657fb65a23b5c3b20040e76307b27e6470b1d17c`, com nxbootstrap 0.8.4 e
+nxrelease 0.4.11. No provider SDL do sistema, a correção descarta somente a
+entrada SDL herdada e obsoleta em `LD_PRELOAD` que usa `$LIB`, desde que o
+adapter não tenha criado um preload diferente. Caminhos válidos já mapeados são
+preservados literalmente; overrides do adapter, privados, não SDL, aninhados,
+ambíguos ou com outra variável continuam falhando fechado. Não há `eval`,
+adivinhação de caminho, limpeza global de `LD_PRELOAD` nem SDL privada.
+
 ### Validação física
 
-O runtime AArch64 exato identificado acima foi aprovado em duas stacks
+O runtime AArch64 do jogo, mantido byte a byte, foi aprovado em duas stacks
 independentes: NextOS com Mali-450 em 1280x720 e dArkOS com Mali-G31 em
 640x480. Passaram vídeo em tela cheia, áudio, gameplay, D-pad de uma opção por
-pressão nos menus, clique alinhado por A/R3 e saída por SELECT+START. As duas
-instâncias foram encerradas depois do teste.
+pressão nos menus, clique alinhado por A/R3 e saída por SELECT+START. A versão
+1.0.4 altera somente o launcher gerado e o pin do framework; seu ZIP exato foi
+validado no host e não recebeu novo teste físico. O candidato 1.0.3 foi
+invalidado quando o ArkOS confirmou que a SDL herdada apontava para um arquivo
+obsoleto.
 
 O código do port é GPL-3.0-only. NXSplash é MIT. As licenças das ferramentas
 de extração acompanham seus componentes. Party Hard GO e todo o conteúdo

@@ -834,7 +834,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "FRAMEWORK-PIN.json",
-      "sha256": "04666536a96960be52fb673de3d7cae336a1a88f84b5641d8ee01a5540ed535d"
+      "sha256": "60e9219557bdd9313b611104ba3efa4a975c4b2f06661b3b8e58a51024afe758"
     },
     {
       "kind": "payload",
@@ -864,13 +864,13 @@
       "kind": "payload",
       "mode": "0644",
       "path": "README.md",
-      "sha256": "d8c0c7b7ea1c9a988a5657efed9a98f01f8db7e7753e5214e9ec48df357c0954"
+      "sha256": "984bb22d5d89f331c7cd84232a3317db44764cbe76c662da7cafe6771863e066"
     },
     {
       "kind": "payload",
       "mode": "0644",
       "path": "RELEASE-METADATA.json",
-      "sha256": "d8622e647e120267092a65f7a276e458c58abb98950578b073c90b69090eba42"
+      "sha256": "a785894ade61752f6465b35d8e34d6a8950667bcd27800df689d46579733a10d"
     },
     {
       "kind": "payload",
@@ -888,7 +888,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "version.txt",
-      "sha256": "9fd28642d3aca191e5c7fc2383cfd6fabb2aac8743f029dabb8989ac584e31bc"
+      "sha256": "d1b77b88f4b9f675a900e4143ac768a21218623cfe1703ca43162388c3271bd6"
     }
   ],
   "portmaster": {
