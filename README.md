@@ -4,6 +4,14 @@
 
 ## English
 
+Version 1.0.7 fixes the D-pad diagonal that kept the character walking after
+UP+LEFT or UP+RIGHT were released together. The cause was in the port's JNI
+shim: Unity reads an injected Android KeyEvent after `nativeInjectEvent`
+returns, and a single shared KeyEvent record let the second key of the same
+frame overwrite the first, so one key-up was never seen. Every injected
+KeyEvent now owns its payload. The defect and the fix were measured on the
+device through the engine's own `CharController.Hor/Vert` values.
+
 Version 1.0.6 fixes movement that could remain latched after releasing the
 D-pad or left stick. It preserves the 1.0.5 menu, native A confirmation,
 pointer and unfinished-tutorial fixes, and keeps the same immutable framework
@@ -211,6 +219,14 @@ game content remain copyright tinyBuild / Pinokl Games and their rights
 holders.
 
 ## Português
+
+A versão 1.0.7 corrige a diagonal do direcional que deixava o personagem
+andando depois de soltar CIMA+ESQUERDA ou CIMA+DIREITA juntos. A causa estava
+no shim JNI do port: a Unity lê o KeyEvent Android injetado depois que
+`nativeInjectEvent` retorna, e um único registro compartilhado deixava a
+segunda tecla do mesmo quadro sobrescrever a primeira, perdendo uma soltura.
+Cada KeyEvent injetado agora tem seu próprio payload. Defeito e correção
+foram medidos no aparelho pelos valores `CharController.Hor/Vert` da engine.
 
 A versão 1.0.6 corrige o movimento que podia ficar preso depois de soltar o
 direcional ou o analógico esquerdo. Ela preserva as correções 1.0.5 de menus,

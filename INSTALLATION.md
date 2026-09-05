@@ -93,8 +93,9 @@ remove também esses dados.
 
 ### Controles
 
-Atualização para 1.0.6: mapas e saves existentes são preservados; a proteção de
-soltura não exige nenhuma alteração no mapa. Se você vem da 1.0.4 ou anterior e
+Atualização para 1.0.6 ou 1.0.7: mapas e saves existentes são preservados; a
+correção da diagonal do direcional (1.0.7) e a proteção de soltura não exigem
+nenhuma alteração no mapa. Se você vem da 1.0.4 ou anterior e
 nunca editou `NEXTOSCONTROLLERS.gptk`, renomeie esse arquivo para
 `NEXTOSCONTROLLERS.gptk.backup` antes da primeira abertura para receber o novo
 padrão. Se personalizou o mapa, preserve suas alterações e troque apenas
@@ -228,8 +229,8 @@ those files too.
 
 ### Controls
 
-Updating to 1.0.6 preserves existing maps and saves; the release guard requires
-no mapping change. If you are coming from 1.0.4 or older and never edited
+Updating to 1.0.6 or 1.0.7 preserves existing maps and saves; the D-pad diagonal
+fix (1.0.7) and the release guard require no mapping change. If you are coming from 1.0.4 or older and never edited
 `NEXTOSCONTROLLERS.gptk`, rename it to `NEXTOSCONTROLLERS.gptk.backup` before
 launching to receive the new default. For a customized map, keep your edits
 and only replace `A = action:partyhard.click` with

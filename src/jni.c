@@ -516,7 +516,6 @@ static jobj *motion_range_list;
 static jobj *touch_motion_range_list;
 static jobj *motion_range_iterator;
 static jobj *motion_ranges[8];
-static jobj *key_event_object;
 static jobj *motion_event_object;
 static jobj *fmod_device_object;
 static jobj *fmod_bytebuffer;
@@ -535,7 +534,15 @@ static char input_device_name[128] = "SDL Gamepad";
 static char input_device_descriptor[160] = "nxcompat-native-gamepad";
 static int input_device_vendor;
 static int input_device_product;
-static struct {
+/* KeyEvent payload.  nativeInjectEvent does NOT consume the object
+ * synchronously: Unity keeps the jobject and reads getAction/getKeyCode on
+ * its own thread later.  A single shared record therefore lost every
+ * KeyEvent that was followed by another one in the same frame (measured on
+ * dArkOSRE, 05/09/2026: releasing a D-pad diagonal delivered UP-up and
+ * LEFT-up in one frame; Unity read LEFT-up twice and CharController.Vert
+ * stayed at 1.0 until the next UP tap).  Every injection now gets its own
+ * payload slot, the same way MotionEvent.obtain() already clones motion. */
+typedef struct {
     int action;
     int keycode;
     int source;
@@ -546,8 +553,20 @@ static struct {
     int flags;
     int unicode;
     int64_t event_time;
-    int64_t down_time[256];
-} key_event;
+    int64_t down_time;
+} key_payload;
+#define KEY_CLONE_COUNT 64
+static jobj *key_clones[KEY_CLONE_COUNT];
+static key_payload key_clone_data[KEY_CLONE_COUNT];
+static unsigned key_clone_next;
+static int64_t key_down_time[256];
+static key_payload key_event_fallback;
+
+static key_payload *key_from_object(jobj *object)
+{
+    return object && object->data
+        ? (key_payload *)object->data : &key_event_fallback;
+}
 typedef struct {
     int action;
     int source;
@@ -597,27 +616,29 @@ void st_jni_input_device_info(const char *name, int vendor, int product,
 void *st_jni_key_event(int action, int keycode, int scancode)
 {
     int64_t now = monotonic_millis();
-    if (keycode < 0 || keycode >= (int)(sizeof key_event.down_time /
-                                        sizeof *key_event.down_time))
+    if (keycode < 0 || keycode >= (int)(sizeof key_down_time /
+                                        sizeof *key_down_time))
         keycode = 0;
-    if (action == 0 || key_event.down_time[keycode] == 0)
-        key_event.down_time[keycode] = now;
-    key_event.action = action;
-    key_event.keycode = keycode;
+    if (action == 0 || key_down_time[keycode] == 0)
+        key_down_time[keycode] = now;
+    unsigned slot = key_clone_next++ % KEY_CLONE_COUNT;
+    if (!key_clones[slot])
+        key_clones[slot] = st_jni_keep(mk_object("android/view/KeyEvent"));
+    key_payload *event = &key_clone_data[slot];
+    event->action = action;
+    event->keycode = keycode;
     /* Android reports these devices as GAMEPAD | DPAD | JOYSTICK. */
-    key_event.source = 0x01000611;
-    key_event.device_id = 1;
-    key_event.meta_state = 0;
-    key_event.repeat = 0;
-    key_event.scancode = scancode;
-    key_event.flags = 0;
-    key_event.unicode = 0;
-    key_event.event_time = now;
-    if (action == 1) {
-        /* nativeInjectEvent consumes the object synchronously, so the slot can
-         * be released as soon as this call returns to the input bridge. */
-    }
-    return key_event_object;
+    event->source = 0x01000611;
+    event->device_id = 1;
+    event->meta_state = 0;
+    event->repeat = 0;
+    event->scancode = scancode;
+    event->flags = 0;
+    event->unicode = 0;
+    event->event_time = now;
+    event->down_time = key_down_time[keycode];
+    key_clones[slot]->data = event;
+    return key_clones[slot];
 }
 
 void *st_jni_motion_event(float lx, float ly, float rx, float ry,
@@ -1649,23 +1670,35 @@ static int64_t j_MotionRange_getFloat(jctx *c)
 
 static int64_t j_KeyEvent_getInt(jctx *c)
 {
-    if (strcmp(c->m->name, "getAction") == 0) return key_event.action;
-    if (strcmp(c->m->name, "getKeyCode") == 0) return key_event.keycode;
-    if (strcmp(c->m->name, "getSource") == 0) return key_event.source;
-    if (strcmp(c->m->name, "getDeviceId") == 0) return key_event.device_id;
-    if (strcmp(c->m->name, "getMetaState") == 0) return key_event.meta_state;
-    if (strcmp(c->m->name, "getRepeatCount") == 0) return key_event.repeat;
-    if (strcmp(c->m->name, "getScanCode") == 0) return key_event.scancode;
-    if (strcmp(c->m->name, "getFlags") == 0) return key_event.flags;
-    if (strcmp(c->m->name, "getUnicodeChar") == 0) return key_event.unicode;
+    const key_payload *event = key_from_object(c->self);
+#ifdef ST_BENCH_PROBES
+    /* Bench-only evidence that Unity reads the event AFTER nativeInjectEvent
+     * returned: pairs with "[st/key]" lines to prove ordering, never public. */
+    static int trace = -1;
+    if (trace < 0)
+        trace = getenv("ST_INPUT_DIAG") != NULL;
+    if (trace && strcmp(c->m->name, "getAction") == 0)
+        fprintf(stderr, "[st/keyread] keycode=%d action=%d slot=%p\n",
+                event->keycode, event->action, (void *)c->self);
+#endif
+    if (strcmp(c->m->name, "getAction") == 0) return event->action;
+    if (strcmp(c->m->name, "getKeyCode") == 0) return event->keycode;
+    if (strcmp(c->m->name, "getSource") == 0) return event->source;
+    if (strcmp(c->m->name, "getDeviceId") == 0) return event->device_id;
+    if (strcmp(c->m->name, "getMetaState") == 0) return event->meta_state;
+    if (strcmp(c->m->name, "getRepeatCount") == 0) return event->repeat;
+    if (strcmp(c->m->name, "getScanCode") == 0) return event->scancode;
+    if (strcmp(c->m->name, "getFlags") == 0) return event->flags;
+    if (strcmp(c->m->name, "getUnicodeChar") == 0) return event->unicode;
     return 0;
 }
 
 static int64_t j_KeyEvent_getLong(jctx *c)
 {
+    const key_payload *event = key_from_object(c->self);
     if (strcmp(c->m->name, "getDownTime") == 0)
-        return key_event.down_time[key_event.keycode];
-    return key_event.event_time;
+        return event->down_time;
+    return event->event_time;
 }
 
 static int64_t j_KeyEvent_isSystem(jctx *c)
@@ -3926,7 +3959,6 @@ void st_jni_init(void)
         motion_range_list->elems[i] = motion_ranges[i];
     }
     motion_range_iterator = mk_object("java/util/Iterator");
-    key_event_object = mk_object("android/view/KeyEvent");
     motion_event_object = mk_object("android/view/MotionEvent");
     motion_event_object->data = &motion_event;
     fmod_device_object = mk_object("org/fmod/FMODAudioDevice");

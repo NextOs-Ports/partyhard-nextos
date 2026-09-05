@@ -127,7 +127,45 @@
       "navigation": {
         "gameplay": [
           {
-            "timeout_s": 600,
+            "ms": 150,
+            "press": "A"
+          },
+          {
+            "sleep_ms": 2500
+          },
+          {
+            "hold": "RIGHT_STICK",
+            "ms": 2000,
+            "x": -1.0,
+            "y": 1.0
+          },
+          {
+            "sleep_ms": 600
+          },
+          {
+            "hold": "RIGHT_STICK",
+            "ms": 800,
+            "x": 1.0,
+            "y": 0.0
+          },
+          {
+            "sleep_ms": 1500
+          },
+          {
+            "hold": "RIGHT_STICK",
+            "ms": 175,
+            "x": 0.0,
+            "y": -1.0
+          },
+          {
+            "sleep_ms": 2000
+          },
+          {
+            "ms": 150,
+            "press": "R3"
+          },
+          {
+            "timeout_s": 180,
             "wait_log": "context=gameplay source=gui:game-screen"
           },
           {
@@ -215,7 +253,7 @@
         "mode": "0755",
         "path": "partyhard-nextos",
         "role": "executable",
-        "sha256": "f937b377e6339570bc18713f07266d4ce83a19f35d11e3d7e5cae62df19709ad"
+        "sha256": "bb3e448476db83c918dd6e8183c3f08fbecebe5055104134c5102968d8e9a8ff"
       },
       {
         "mode": "0644",
@@ -840,7 +878,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "INSTALLATION.md",
-      "sha256": "cbe1fba833bba758370640e8a6f67d561c677d596b5915eb682fed86fc74c4d9"
+      "sha256": "532458cdd738666a0d0accd49b9db4715052ffd2a980b89b7d7a6b37e50e6a99"
     },
     {
       "kind": "license-notice",
@@ -864,13 +902,13 @@
       "kind": "payload",
       "mode": "0644",
       "path": "README.md",
-      "sha256": "fa348f2235e188bcfc75525980ec27b765b1aceb6b7d00d8e3a6973fddffec31"
+      "sha256": "29ab3ed55ffa35b92285e0bbf058afbb8efa386320814be8d20bd4be404c3661"
     },
     {
       "kind": "payload",
       "mode": "0644",
       "path": "RELEASE-METADATA.json",
-      "sha256": "77ecd93bca51fbd232a4fc7f4d7503d4e118bdadc555833b6327dcce545888d3"
+      "sha256": "9858109c28b9d6c4c356d309f92b8c7579b7fdf3547e810887c2750d112e908a"
     },
     {
       "kind": "payload",
@@ -888,7 +926,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "version.txt",
-      "sha256": "51c18dc8694861beb47a67894e61044864214435389f6d3a274704d9566ff96c"
+      "sha256": "6d6b9230dd8b8aac527f8929b7c2fc1fa0365deccca856216de979d6f5c6a6fe"
     }
   ],
   "portmaster": {

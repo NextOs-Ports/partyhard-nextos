@@ -178,6 +178,8 @@ python3 "$PORT_DIR/tests/test_input_release_contract.py" ||
   fail "input release contract regressed"
 python3 "$PORT_DIR/tests/test_health_receipt.py" ||
   fail "run-bound health receipt contract regressed"
+python3 "$PORT_DIR/tests/test_key_event_payload.py" ||
+  fail "per-event KeyEvent payload contract regressed"
 
 OBJS=()
 index=0

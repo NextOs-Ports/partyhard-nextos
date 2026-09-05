@@ -17,7 +17,7 @@
     "nxinput": "0.11.8",
     "nxrelease": "0.4.11",
     "nxsplash": "0.1.2",
-    "release_status": "Framework V5 unchanged; port-local single-route D-pad, SOCD limiter, exact-device neutral release guard and run-bound health after real presents",
+    "release_status": "Framework V5 unchanged; port-local JNI KeyEvent payload per injection (a D-pad diagonal released in one frame no longer keeps CharController walking), on top of the 1.0.6 single-route D-pad, SOCD limiter, neutral release guard and run-bound health",
     "splash_duration_ms": 5000
   },
   "game": {
@@ -29,14 +29,14 @@
     "version": "0.100038"
   },
   "port_id": "partyhard",
-  "port_version": "1.0.6",
+  "port_version": "1.0.7",
   "runtime": {
     "architecture": "aarch64",
-    "build_id": "a04d2a3b8b4d663046cb5484a92296d1114ad201",
+    "build_id": "cf097882a93ec6d7ba797c534ba3540cac0085c7",
     "display_policy": "auto-stretch; owner preserve opt-in",
     "executable": "partyhard-nextos",
-    "executable_sha256": "f937b377e6339570bc18713f07266d4ce83a19f35d11e3d7e5cae62df19709ad",
-    "executable_size": 605664,
+    "executable_sha256": "bb3e448476db83c918dd6e8183c3f08fbecebe5055104134c5102968d8e9a8ff",
+    "executable_size": 609760,
     "framebuffer_sample": "immediately-before-present",
     "graphics_evidence_boundary": "post-first-present",
     "max_glibc": "2.27",

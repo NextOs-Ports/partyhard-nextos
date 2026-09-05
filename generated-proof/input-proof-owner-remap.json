@@ -15,7 +15,45 @@
    "sleep_ms": 5000
   },
   {
-   "timeout_s": 600,
+   "ms": 150,
+   "press": "A"
+  },
+  {
+   "sleep_ms": 2500
+  },
+  {
+   "hold": "RIGHT_STICK",
+   "ms": 2000,
+   "x": -1.0,
+   "y": 1.0
+  },
+  {
+   "sleep_ms": 600
+  },
+  {
+   "hold": "RIGHT_STICK",
+   "ms": 800,
+   "x": 1.0,
+   "y": 0.0
+  },
+  {
+   "sleep_ms": 1500
+  },
+  {
+   "hold": "RIGHT_STICK",
+   "ms": 175,
+   "x": 0.0,
+   "y": -1.0
+  },
+  {
+   "sleep_ms": 2000
+  },
+  {
+   "ms": 150,
+   "press": "R3"
+  },
+  {
+   "timeout_s": 180,
    "wait_log": "context=gameplay source=gui:game-screen"
   },
   {
