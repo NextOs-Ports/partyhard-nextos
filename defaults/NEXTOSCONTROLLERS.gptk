@@ -37,7 +37,6 @@ LEFT = native
 RIGHT = native
 
 [override.menu]
-A = action:partyhard.click
 R3 = action:partyhard.click
 stick.right.vector = action:partyhard.cursor
 

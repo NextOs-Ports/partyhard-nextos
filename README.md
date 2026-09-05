@@ -4,6 +4,12 @@
 
 ## English
 
+Version 1.0.5 fixes menu focus, native A confirmation, the pointer on control
+selection dialogs, and re-entry after leaving the unfinished tutorial. The
+framework remains the same as 1.0.4. Involuntary movement reported on
+muOS/ROCKNIX has not been verified as fixed; the missing tutorial stick glyph
+is still a known presentation limitation.
+
 Party Hard GO 0.100038 runs through a native AArch64 Unity 6 IL2CPP loader and
 the system SDL2/EGL/GLES2 stack. The finished adapter preserves Unity's Android
 startup order, delivers the opening cutscene, menus and full gameplay, outputs
@@ -67,7 +73,7 @@ use, preserving the native firmware mapping on every other provider.
 
 | Control | Gameplay / Menu | Delivery |
 |---|---|---|
-| A | native action in gameplay; `partyhard.click` in menus | keycode 96 / Android touch |
+| A | native action / confirm selected menu option | Android keycode 96 |
 | B / X / Y | `partyhard.action2..4` | Android keycodes 97 / 99 / 100 |
 | L1 / R1 | `partyhard.bumper_left` / `partyhard.bumper_right` | 102 / 103 |
 | START | `partyhard.pause` | 108; while the game is paused, Android BACK closes the pause |
@@ -77,19 +83,33 @@ use, preserving the native firmware mapping on every other provider.
 | D-pad, L2 / R2, L3, SELECT | native | menu D-pad uses one KeyEvent edge; gameplay retains HAT |
 | SELECT + START | sovereign exit chord (framework, outside the file) | |
 
-Contexts are proven from the engine: the scenes of this build's
-`BuildSettings` (`AndroidLicensePermissionResolver`, `MainMenu`, `cutscene`)
-are `[menu]`; every scene loaded from the asset pack is `[gameplay]`;
-`Time.timeScale == 0` inside a party is the pause and selects `[menu]`; an
-empty (loading) scene keeps every control on the native passthrough. The
+Contexts follow the engine's static `App.View.Gui._screenType`: `GameScreen`
+is `[gameplay]`, while pause and other GUI screens are `[menu]`. `MainMenu`
+also contains the party, so its scene name alone cannot identify a menu.
+The visible `ControlsSelectorPopUp` takes precedence over the underlying
+gameplay screen, keeping the pointer available for TOUCH/VIRTUAL selection.
+The standalone intro/license scenes retain their own menu pointer when the
+GUI container is absent. An unready GUI or empty loading scene otherwise
+keeps native passthrough; `Time.timeScale == 0` in gameplay selects `[menu]`. The
 native passthrough is the approved Mali-450 behaviour, so a missing or invalid
 owner file changes nothing. In a proven menu, the right stick moves the
-pointer and A or R3 clicks; in gameplay all three return to the native game.
+pointer and R3 clicks; A confirms the native menu selection, independent of
+the pointer position. In gameplay these controls return to the native game.
+The TOUCH/VIRTUAL popup requires the pointer and R3. This corrected default
+does not overwrite an edited owner map; remove its menu A-click override to
+adopt native confirmation on an existing installation.
 The arrow starts visible, returns when moved or clicked, and hides after four
 idle seconds following its first click. The pointer and Android MotionEvent
 share the exact final content rectangle, so the click stays under the arrow
 with bars or stretching on any aspect ratio. Menu D-pad navigation is
 edge-triggered once per press instead of also receiving a continuous HAT.
+Native menu navigation owns selection until the auxiliary pointer is used
+again. This prevents Unity's remembered touch position from reselecting an
+old hovered button after a D-pad press, including pause and Quit dialogs.
+
+If the initial tutorial is left before completion, the first poster temporarily
+resumes that tutorial through the game's native start action. It does not unlock
+the first party or modify saved progress. Normal level locks remain unchanged.
 
 The port opens every admitted pad (`nxinput_padset`) and the exit chord counts
 only when SELECT and START come from the same pad. No test harness lives in
@@ -169,6 +189,12 @@ holders.
 
 ## Português
 
+A versão 1.0.5 corrige o foco dos menus, a confirmação nativa com A, o cursor
+na seleção de controles e a retomada do tutorial incompleto. O framework é
+o mesmo da 1.0.4. Movimento involuntário relatado no muOS/ROCKNIX ainda não
+foi validado como corrigido; o glifo ausente do analógico segue como limitação
+de apresentação do tutorial.
+
 Party Hard GO 0.100038 roda por um loader Unity 6 IL2CPP AArch64 nativo e pela
 stack SDL2/EGL/GLES2 do sistema. O adapter finalizado preserva a ordem de boot
 Android da Unity, entrega a cutscene de abertura, os menus e a gameplay
@@ -218,7 +244,7 @@ hashes, transacional e roda somente sobre dados do dono.
 
 | Controle | Gameplay / Menu | Entrega |
 |---|---|---|
-| A | ação nativa no gameplay; `partyhard.click` nos menus | keycode 96 / toque Android |
+| A | ação nativa / confirmar a opção selecionada no menu | keycode Android 96 |
 | B / X / Y | `partyhard.action2..4` | keycodes Android 97 / 99 / 100 |
 | L1 / R1 | `partyhard.bumper_left` / `partyhard.bumper_right` | 102 / 103 |
 | START | `partyhard.pause` | 108; com o jogo pausado, o BACK do Android fecha o pause |
@@ -228,19 +254,33 @@ hashes, transacional e roda somente sobre dados do dono.
 | Direcional, L2 / R2, L3, SELECT | native | D-pad usa uma borda KeyEvent no menu e mantém HAT no gameplay |
 | SELECT + START | chord soberano de saída (framework, fora do arquivo) | |
 
-Os contextos são provados pela engine: as cenas do `BuildSettings` deste build
-(`AndroidLicensePermissionResolver`, `MainMenu`, `cutscene`) são `[menu]`;
-toda cena carregada do pacote de assets é `[gameplay]`; `Time.timeScale == 0`
-dentro de uma festa é o pause e seleciona `[menu]`; cena vazia (carregando)
-mantém tudo no passthrough nativo — que é exatamente o comportamento aprovado
-no Mali-450. O mapa editável agora usa `NEXTOS_CONTROLLERS/4`, e o seam C6 V5
+Os contextos seguem o campo estático `App.View.Gui._screenType`: `GameScreen`
+é `[gameplay]`; pause e outras telas da GUI são `[menu]`. A cena `MainMenu`
+também contém a partida e, sozinha, não prova que existe um menu aberto.
+A janela visível `ControlsSelectorPopUp` tem prioridade sobre a partida ao
+fundo, mantendo a seta para escolher TOUCH/VIRTUAL. As cenas independentes de
+introdução/licença mantêm seu cursor mesmo sem o container da GUI. Nos demais
+casos, GUI ainda indisponível ou cena vazia mantém o passthrough nativo;
+`Time.timeScale == 0` no gameplay seleciona `[menu]`.
+O mapa editável usa `NEXTOS_CONTROLLERS/4`, e o seam C6 V5
 decide pelo provider SDL realmente carregado. Em menu comprovado, o analógico
-direito move a seta e A/R3 clicam; no gameplay os três voltam ao jogo
-nativamente. A seta nasce visível, reaparece ao ser usada e some após quatro
+direito move a seta e R3 clica; A confirma a seleção nativa do menu, sem depender
+da posição da seta. No gameplay esses controles voltam ao jogo nativamente.
+A janela TOUCH/VIRTUAL exige seta e R3. O padrão corrigido não sobrescreve
+mapas editados pelo dono; numa instalação existente, remova o override de
+clique do A em menu para adotar a confirmação nativa.
+A seta nasce visível, reaparece ao ser usada e some após quatro
 segundos parada depois do primeiro clique. A seta e o MotionEvent Android usam
 o mesmo retângulo final de conteúdo, mantendo o clique sob a ponta tanto com
 barras quanto esticado, em qualquer proporção. O D-pad navega uma opção por
 pressão no menu, sem a segunda rota HAT contínua.
+A navegação nativa mantém o foco até o ponteiro auxiliar ser usado novamente.
+Isso impede que a última posição de toque guardada pela Unity selecione de
+novo outro botão após o direcional, inclusive no pause e na confirmação de Quit.
+
+Ao sair do tutorial inicial antes de terminá-lo, o primeiro cartaz permite
+retomar esse tutorial pela ação nativa do jogo. Isso não desbloqueia a primeira
+festa nem altera o progresso salvo. As travas normais das fases permanecem.
 
 ### Opções de vídeo
 

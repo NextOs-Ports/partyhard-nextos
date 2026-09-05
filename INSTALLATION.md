@@ -93,17 +93,25 @@ remove também esses dados.
 
 ### Controles
 
+Atualização para 1.0.5: mapas existentes são preservados. Se você nunca editou
+`NEXTOSCONTROLLERS.gptk`, renomeie esse arquivo para
+`NEXTOSCONTROLLERS.gptk.backup` antes da primeira abertura para receber o novo
+padrão. Se personalizou o mapa, preserve suas alterações e troque apenas
+`A = action:partyhard.click` por `A = action:partyhard.action1` na seção
+`[override.menu]`. R3 continua sendo o clique da seta. Não altere o save.
+
 | | |
 |---|---|
 | Analógico esquerdo | anda |
 | Analógico direito | move a seta do ponteiro |
-| **A ou R3** | clica com a seta nos menus; volta à ação nativa no gameplay |
+| **A** | confirma a opção selecionada; ação nativa no gameplay |
+| **R3** | clica com a seta nos menus; ação nativa no gameplay |
 | B / X / Y / L1 / R1 / L2 / R2 / direcional | botões do jogo (o D-pad navega uma opção por pressão nos menus) |
 | **START** | pausa; com o jogo pausado, fecha o pause |
 | **SELECT + START** | salva e sai |
 
 Na primeira tela o jogo pergunta o tipo de controle. Use a **seta** (analógico
-direito + R3) para escolher **TOUCH** — depois disso o pad comanda tudo. O mapa
+direito + R3) para escolher **VIRTUAL** ou **TOUCH**. O mapa
 editável `NEXTOSCONTROLLERS.gptk` (`NEXTOS_CONTROLLERS/4`, copiado de
 `defaults/`) permite trocar ou anular botões por contexto; o mapping físico do
 firmware/PortMaster continua sendo a autoridade. A seta nasce visível para
@@ -215,17 +223,25 @@ those files too.
 
 ### Controls
 
+Updating to 1.0.5 preserves existing maps. If you never edited
+`NEXTOSCONTROLLERS.gptk`, rename it to `NEXTOSCONTROLLERS.gptk.backup` before
+launching to receive the new default. For a customized map, keep your edits
+and only replace `A = action:partyhard.click` with
+`A = action:partyhard.action1` under `[override.menu]`. R3 remains the pointer
+click. Do not change or remove saved progress.
+
 | | |
 |---|---|
 | Left stick | walk |
 | Right stick | moves the pointer arrow |
-| **A or R3** | clicks with the arrow in menus; returns to its native action in gameplay |
+| **A** | confirms the selected menu option; native action in gameplay |
+| **R3** | pointer click in menus; native action in gameplay |
 | B / X / Y / L1 / R1 / L2 / R2 / D-pad | game buttons (the D-pad moves one menu item per press) |
 | **START** | pause; while paused, closes the pause |
 | **SELECT + START** | save and exit |
 
 On the first screen the game asks for the controls type. Use the **arrow**
-(right stick + R3) to pick **TOUCH** — after that the pad drives everything.
+(right stick + R3) to pick **VIRTUAL** or **TOUCH**.
 The editable `NEXTOSCONTROLLERS.gptk` (`NEXTOS_CONTROLLERS/4`, copied from
 `defaults/`) can remap or null buttons per context; the firmware/PortMaster
 physical mapping remains the authority. The arrow starts visible for this

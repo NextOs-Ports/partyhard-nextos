@@ -145,13 +145,13 @@
       "sink": "adapter.input.android-keyevent"
     },
     {
-      "action": "partyhard.click",
+      "action": "partyhard.action1",
       "context": "menu",
       "control": "A",
       "decision": "ACTION",
       "delivery_count": 1,
       "event": "press",
-      "sink": "adapter.input.cursor-click"
+      "sink": "adapter.input.android-keyevent"
     },
     {
       "action": "partyhard.action2",

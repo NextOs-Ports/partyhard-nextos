@@ -126,7 +126,7 @@
         "Y": "partyhard.action4"
       },
       "menu": {
-        "A": "partyhard.click",
+        "A": "partyhard.action1",
         "B": "partyhard.action2",
         "DOWN": "native",
         "L1": "partyhard.bumper_left",

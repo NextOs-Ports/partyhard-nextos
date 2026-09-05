@@ -18,11 +18,9 @@
  *        v
  *   NEXTOSCONTROLLERS.gptk vivo (owner/default, lido no pré-init) decide
  *   action / null / native por controle e por contexto PROVADO pela engine
- *   (cena ativa por NOME via IL2CPP: as cenas do BuildSettings deste jogo —
- *   AndroidLicensePermissionResolver, MainMenu, cutscene — são [menu]; toda
- *   cena carregada do datapack (level1/level2, o tutorial e as festas) é
- *   [gameplay]; Time.timeScale == 0 dentro de uma festa é o pause = [menu];
- *   cena vazia = carregando = passthrough)
+ *   (App.View.Gui._screenType ESTATICO via IL2CPP: GameScreen = gameplay,
+ *   GamePauseScreen/janelas = menu; MainMenu tambem contem a partida e nao
+ *   prova o contexto. GUI ainda nao inicializada = passthrough)
  *        |
  *        +--> ACTION  -> runtime vivo -> sink real deste adapter: o MESMO
  *        |               KeyEvent/MotionEvent Android que o InControl do
@@ -66,6 +64,7 @@
 #include "nxinput_gptk.h"
 #include "nxinput_exit_chord.h"
 #include "input_gptk.h"
+#include "tutorial_return.h"
 #include "nxinput_padset.h"
 
 /* ===== Constantes Android consumidas pela Unity/InControl =============== */
@@ -319,181 +318,118 @@ static void sample_scene(void)
         scene_paused = scene_timescale_zero();
 }
 
-/* ===== Tela corrente provada pela GUI do jogo (IL2CPP) ==================
- * MEDIDO nos metadados deste build: `App.View.Gui` guarda `_screenType`, um
- * enum com TitleScreen/GameScreen/GamePauseScreen/BoardSceeen/BlackScreen/
- * WorkshopMainScreen/SplashScreen.  A festa NAO e' uma cena: ela vive dentro
- * de MainMenu, entao a cena ativa nao distingue menu de gameplay — a tela da
- * GUI distingue.  A instancia vem de um campo ESTATICO do tipo Gui (achado
- * por enumeracao, nunca por nome presumido); os valores do enum sao lidos das
- * proprias constantes.  Sem contrato = regra de cena (tudo menu). */
+/* ===== Current screen: the game's STATIC App.View.Gui contract =========
+ * _screenType is static in the authenticated Party Hard GO metadata.
+ * Gui has no instance. MainMenu contains gameplay and is not a substitute
+ * for this state. Read fields by metadata, never by a hard-coded RVA.
+ */
 #define FIELD_ATTRIBUTE_STATIC 0x0010
 static int gui_api_state;
-static FieldInfo *gui_instance_field;   /* estatico: Gui, ou o dono (singleton) */
-static FieldInfo *gui_owner_field;      /* instancia do dono -> Gui (2 niveis) */
-static FieldInfo *gui_screen_field;
+static FieldInfo *gui_screen_field, *gui_container_field;
+static FieldInfo *gui_controls_popup_field, *gui_popup_visible_field;
+static int gui_controls_popup_visible;
 static const MethodInfo *object_alive_method;
 static int32_t gui_game_screen = -1, gui_pause_screen = -1;
 static int gui_screen_value = -1;
-
-static struct {
-    size_t (*image_get_class_count)(const void *);
-    void *(*image_get_class)(const void *, size_t);
-    void *(*class_get_fields)(void *, void **);
-    const char *(*field_get_name)(void *);
-    int (*field_get_flags)(void *);
-    const void *(*field_get_type)(void *);
-    void *(*class_from_type)(const void *);
-    const char *(*class_get_name)(void *);
-} rawil2;
-
-static FieldInfo *static_field_of_type(Il2CppClass *owner, const char *type_name)
-{
-    void *iter = NULL;
-    void *f;
-    while ((f = rawil2.class_get_fields(owner, &iter)) != NULL) {
-        if (!(rawil2.field_get_flags(f) & FIELD_ATTRIBUTE_STATIC))
-            continue;
-        void *k = rawil2.class_from_type(rawil2.field_get_type(f));
-        const char *n = k ? rawil2.class_get_name(k) : NULL;
-        if (n && strcmp(n, type_name) == 0)
-            return f;
-    }
-    return NULL;
-}
 
 static int gui_api_resolve(void)
 {
     if (gui_api_state)
         return gui_api_state > 0;
-    gui_api_state = -1;
-    if (!il2_load()) {
-        fprintf(stderr, "[st/input] gui contract: il2cpp exports unavailable\n");
+    if (!il2_load())
         return 0;
-    }
+    gui_api_state = -1;
     nx_mod *mod = nx_find_mod("libil2cpp.so");
     if (!mod)
         return 0;
-    *(void **)&rawil2.image_get_class_count = nx_lookup_in(mod, "il2cpp_image_get_class_count");
-    *(void **)&rawil2.image_get_class = nx_lookup_in(mod, "il2cpp_image_get_class");
-    *(void **)&rawil2.class_get_fields = nx_lookup_in(mod, "il2cpp_class_get_fields");
-    *(void **)&rawil2.field_get_name = nx_lookup_in(mod, "il2cpp_field_get_name");
-    *(void **)&rawil2.field_get_flags = nx_lookup_in(mod, "il2cpp_field_get_flags");
-    *(void **)&rawil2.field_get_type = nx_lookup_in(mod, "il2cpp_field_get_type");
-    *(void **)&rawil2.class_from_type = nx_lookup_in(mod, "il2cpp_class_from_il2cpp_type");
-    *(void **)&rawil2.class_get_name = nx_lookup_in(mod, "il2cpp_class_get_name");
-    if (!rawil2.class_get_fields || !rawil2.field_get_name || !rawil2.field_get_flags ||
-        !rawil2.field_get_type || !rawil2.class_from_type || !rawil2.class_get_name) {
-        fprintf(stderr, "[st/input] gui contract: field reflection exports missing\n");
+    void *(*class_get_fields)(void *, void **) = NULL;
+    const char *(*field_get_name)(void *) = NULL;
+    int (*field_get_flags)(void *) = NULL;
+    const void *(*field_get_type)(void *) = NULL;
+    void *(*class_from_type)(const void *) = NULL;
+    *(void **)&class_get_fields = nx_lookup_in(mod, "il2cpp_class_get_fields");
+    *(void **)&field_get_name = nx_lookup_in(mod, "il2cpp_field_get_name");
+    *(void **)&field_get_flags = nx_lookup_in(mod, "il2cpp_field_get_flags");
+    *(void **)&field_get_type = nx_lookup_in(mod, "il2cpp_field_get_type");
+    *(void **)&class_from_type = nx_lookup_in(mod, "il2cpp_class_from_il2cpp_type");
+    if (!class_get_fields || !field_get_name || !field_get_flags ||
+        !field_get_type || !class_from_type)
         return 0;
-    }
-    static const char *const gui_ns[] = { "App.View", "App", "", "View" };
-    Il2CppClass *gui = NULL;
-    for (size_t i = 0; i < sizeof gui_ns / sizeof *gui_ns && !gui; i++)
-        gui = il2_class(gui_ns[i], "Gui");
+
+    Il2CppClass *gui = il2_class("App.View", "Gui");
     Il2CppClass *object = il2_class("UnityEngine", "Object");
+    Il2CppClass *visual = il2_class("App.View", "VisualComponent");
     object_alive_method = object ? il2_method(object, "op_Implicit", 1) : NULL;
-    if (!gui || !object_alive_method) {
-        fprintf(stderr, "[st/input] gui contract: unavailable (Gui=%s op_Implicit=%s)\n",
-                gui ? "ok" : "missing", object_alive_method ? "ok" : "missing");
-        return 0;
-    }
-    gui_screen_field = il2_field(gui, "_screenType");
-    gui_instance_field = static_field_of_type(gui, "Gui");
-    /* Sem estatico proprio: varrer TODAS as classes de todos os assemblies
-     * por (1) um campo estatico do tipo Gui ou (2) um singleton (estatico
-     * do proprio tipo) que guarde um Gui de instancia.  Nada por nome. */
-    if (!gui_instance_field && rawil2.image_get_class_count && rawil2.image_get_class) {
-        Il2CppClass *owner_hit = NULL;
-        extern void *il2_domain_images(size_t *n); /* il2.c */
-        size_t nimg = 0;
-        const void **images = il2_domain_images(&nimg);
-        for (size_t i = 0; i < nimg && !gui_instance_field; i++) {
-            size_t nc = rawil2.image_get_class_count(images[i]);
-            for (size_t c = 0; c < nc && !gui_instance_field; c++) {
-                void *k = rawil2.image_get_class(images[i], c);
-                if (!k) continue;
-                FieldInfo *f = static_field_of_type(k, "Gui");
-                if (f) { gui_instance_field = f; owner_hit = k; break; }
-            }
-        }
-        for (size_t i = 0; i < nimg && !gui_instance_field; i++) {
-            size_t nc = rawil2.image_get_class_count(images[i]);
-            for (size_t c = 0; c < nc && !gui_instance_field; c++) {
-                void *k = rawil2.image_get_class(images[i], c);
-                if (!k) continue;
-                const char *kn = rawil2.class_get_name(k);
-                FieldInfo *self = kn ? static_field_of_type(k, kn) : NULL;
-                if (!self) continue;
-                void *iter = NULL, *f;
-                while ((f = rawil2.class_get_fields(k, &iter)) != NULL) {
-                    if (rawil2.field_get_flags(f) & FIELD_ATTRIBUTE_STATIC) continue;
-                    void *fk = rawil2.class_from_type(rawil2.field_get_type(f));
-                    const char *fn = fk ? rawil2.class_get_name(fk) : NULL;
-                    if (fn && strcmp(fn, "Gui") == 0) {
-                        gui_instance_field = self; gui_owner_field = f; owner_hit = k; break;
-                    }
-                }
-            }
-        }
-        if (owner_hit)
-            fprintf(stderr, "[st/input] gui contract: instance via %s.%s%s%s\n",
-                    rawil2.class_get_name(owner_hit), rawil2.field_get_name(gui_instance_field),
-                    gui_owner_field ? "." : "", gui_owner_field ? rawil2.field_get_name(gui_owner_field) : "");
-    }
-    if (gui_screen_field) {
-        void *enum_class = rawil2.class_from_type(rawil2.field_get_type(gui_screen_field));
-        void *iter = NULL, *f;
-        while (enum_class && (f = rawil2.class_get_fields(enum_class, &iter)) != NULL) {
-            const char *n = rawil2.field_get_name(f);
-            if (!n || !(rawil2.field_get_flags(f) & FIELD_ATTRIBUTE_STATIC))
+    gui_screen_field = gui ? il2_field(gui, "_screenType") : NULL;
+    gui_container_field = gui ? il2_field(gui, "_screenContainer") : NULL;
+    gui_controls_popup_field = gui ? il2_field(gui, "ControlsSelectorPopUp") : NULL;
+    gui_popup_visible_field = visual ? il2_field(visual, "_isShow") : NULL;
+    int storage_ok = gui_screen_field && gui_container_field &&
+        gui_controls_popup_field && gui_popup_visible_field &&
+        (field_get_flags(gui_screen_field) & FIELD_ATTRIBUTE_STATIC) &&
+        (field_get_flags(gui_container_field) & FIELD_ATTRIBUTE_STATIC) &&
+        (field_get_flags(gui_controls_popup_field) & FIELD_ATTRIBUTE_STATIC) &&
+        !(field_get_flags(gui_popup_visible_field) & FIELD_ATTRIBUTE_STATIC);
+    if (storage_ok) {
+        void *enum_class = class_from_type(field_get_type(gui_screen_field));
+        void *iter = NULL, *field;
+        while (enum_class && (field = class_get_fields(enum_class, &iter))) {
+            const char *name = field_get_name(field);
+            if (!name || !(field_get_flags(field) & FIELD_ATTRIBUTE_STATIC))
                 continue;
-            int32_t v = -1;
-            if (strcmp(n, "GameScreen") == 0) { il2_static_get(f, &v); gui_game_screen = v; }
-            if (strcmp(n, "GamePauseScreen") == 0) { il2_static_get(f, &v); gui_pause_screen = v; }
+            int32_t value = -1;
+            if (strcmp(name, "GameScreen") == 0) {
+                il2_static_get(field, &value);
+                gui_game_screen = value;
+            } else if (strcmp(name, "GamePauseScreen") == 0) {
+                il2_static_get(field, &value);
+                gui_pause_screen = value;
+            }
         }
     }
-    int ok = gui_instance_field && gui_screen_field && gui_game_screen >= 0 &&
-             gui_pause_screen >= 0;
+    int ok = storage_ok && object_alive_method &&
+             gui_game_screen >= 0 && gui_pause_screen >= 0 &&
+             gui_game_screen != gui_pause_screen;
     gui_api_state = ok ? 1 : -1;
-    fprintf(stderr, "[st/input] gui contract: %s (instance=%s screen=%s GameScreen=%d GamePauseScreen=%d)\n",
-            ok ? "ready" : "unavailable",
-            gui_instance_field ? rawil2.field_get_name(gui_instance_field) : "missing",
-            gui_screen_field ? "ok" : "missing", gui_game_screen, gui_pause_screen);
+    fprintf(stderr, "[st/input] gui contract: %s (storage=%s GameScreen=%d GamePauseScreen=%d)\n",
+            ok ? "ready" : "unavailable", storage_ok ? "static" : "invalid",
+            gui_game_screen, gui_pause_screen);
     return ok;
 }
 
-static int object_alive(void *obj)
-{
-    if (!obj)
-        return 0;
-    void *args[1] = { obj };
-    Il2CppObject *boxed = il2_call(object_alive_method, NULL, args,
-                                   "Object.op_Implicit");
-    void *v = il2_unbox(boxed);
-    return v && *(uint8_t *)v != 0;
-}
-
-/* -1 = sem GUI viva; senao o valor de _screenType. */
+/* No stale screen survives a missing/destroyed UI container. */
 static int sample_gui_screen(void)
 {
+    gui_screen_value = -1;
+    gui_controls_popup_visible = 0;
     if (!gui_api_resolve())
         return -1;
-    void *gui = NULL;
-    il2_static_get(gui_instance_field, &gui);
-    if (gui_owner_field) {
-        if (!gui)
-            return -1;
-        void *inner = NULL;
-        il2_field_get(gui, gui_owner_field, &inner);
-        gui = inner;
-    }
-    if (!object_alive(gui))
+    void *container = NULL;
+    il2_static_get(gui_container_field, &container);
+    if (!container)
+        return -1;
+    void *args[1] = { container };
+    Il2CppObject *alive = il2_call(object_alive_method, NULL, args,
+                                  "Object.op_Implicit(Gui._screenContainer)");
+    void *value = il2_unbox(alive);
+    if (!value || !*(uint8_t *)value)
         return -1;
     int32_t screen = -1;
-    il2_field_get(gui, gui_screen_field, &screen);
-    if (screen != gui_screen_value) {
-        gui_screen_value = screen;
+    il2_static_get(gui_screen_field, &screen);
+    /* The first-run selector overlays GameScreen without changing
+     * _screenType. Its actual visibility, not the underlying scene, owns
+     * the cursor until the user chooses TOUCH or VIRTUAL. */
+    void *popup = NULL;
+    il2_static_get(gui_controls_popup_field, &popup);
+    if (popup) {
+        uint8_t shown = 0;
+        il2_field_get(popup, gui_popup_visible_field, &shown);
+        gui_controls_popup_visible = shown != 0;
+    }
+    gui_screen_value = screen;
+    static int previous_screen = -1;
+    if (screen != previous_screen) {
+        previous_screen = screen;
         fprintf(stderr, "[st/input] gui screen=%d\n", screen);
     }
     return screen;
@@ -515,9 +451,25 @@ static void update_engine_context(unsigned long frame)
         st_gptk_clear_context("scene:loading");
         return;
     }
-    int screen = frame % ST_SCENE_SAMPLE_FRAMES == 1 ? sample_gui_screen()
-                                                     : gui_screen_value;
+    /* Static fields are cheap to sample every frame. A menu closing must
+     * release its touch before the next gameplay input, not 30 frames later. */
+    int screen = sample_gui_screen();
+    if (gui_api_state > 0 && screen < 0) {
+        /* The intro/license scenes have their own Unity UI (including
+         * Skip), outside Gui. They are proven standalone menus. MainMenu
+         * is different: it contains gameplay and requires the Gui state. */
+        if (!strcmp(scene_name, "cutscene") ||
+            !strcmp(scene_name, "AndroidLicensePermissionResolver"))
+            st_gptk_set_context(ST_GPTK_CONTEXT_MENU, "scene:standalone-menu");
+        else
+            st_gptk_clear_context("gui:not-ready");
+        return;
+    }
     if (gui_api_state > 0 && screen >= 0) {
+        if (gui_controls_popup_visible) {
+            st_gptk_set_context(ST_GPTK_CONTEXT_MENU, "gui:controls-selector");
+            return;
+        }
         if (screen == gui_game_screen) {
             if (scene_timescale_zero())
                 st_gptk_set_context(ST_GPTK_CONTEXT_MENU, "gui:paused");
@@ -1652,6 +1604,177 @@ int st_input_init(void)
     return (controller || vpad_enabled) ? 0 : -1;
 }
 
+/* ===== Menu focus: native navigation versus stale touch hover ===========
+ * Unity retains mousePosition after a touch UP. MouseOverHandler keeps
+ * selecting that old position while MenuInputManager.mouseControl is true,
+ * undoing D-pad selection without updating activeButtonIndex. Hand focus to
+ * native navigation until the owner actually uses the auxiliary pointer.
+ * Keep the game's selection/click handlers and its input mode untouched.
+ */
+static void update_menu_focus(int native_intent, int pointer_intent)
+{
+    static int native_focus;
+    static int resolved;
+    static FieldInfo *instance_field, *mouse_field;
+    if (st_gptk_context() != ST_GPTK_CONTEXT_MENU) {
+        native_focus = 0;
+        return;
+    }
+    int release_pointer = pointer_intent && native_focus;
+    if (pointer_intent)
+        native_focus = 0;
+    else if (native_intent)
+        native_focus = 1;
+    if ((!native_focus && !release_pointer) || !il2_load())
+        return;
+    if (!resolved) {
+        resolved = -1;
+        Il2CppClass *manager = il2_class("Assets.Scripts.Controllers.Game", "MenuInputManager");
+        if (!manager)
+            return;
+        instance_field = il2_field(manager, "instance");
+        mouse_field = il2_field(manager, "mouseControl");
+        if (instance_field && mouse_field)
+            resolved = 1;
+    }
+    if (resolved < 0)
+        return;
+    void *manager = NULL;
+    il2_static_get(instance_field, &manager);
+    if (!manager)
+        return;
+    uint8_t before = 0, mouse = native_focus ? 0 : 1;
+    il2_field_get(manager, mouse_field, &before);
+    if (before != mouse) {
+        il2_field_set(manager, mouse_field, &mouse);
+        if (input_diag)
+            fprintf(stderr, "[st/input] menu focus=%s (native hover gate)\n",
+                    native_focus ? "gamepad" : "pointer");
+    }
+}
+
+/* ===== Tutorial glyph visibility (presentation only) ====================
+ * The Android game keeps TouchMobileMode=true even while its input-sign
+ * controller selects XboxGamepadButtons. TutorialArrowButtonSign hides its
+ * animator GameObject under that flag. Restore only that existing, selected
+ * glyph, under a visible parent; never change mobile mode, input profile,
+ * animation, tutorial progress, or a hidden tutorial container.
+ */
+static int glyph_bool(const MethodInfo *method, void *self)
+{
+    void *value = il2_unbox(il2_call(method, self, NULL, "tutorial glyph state"));
+    return value ? *(uint8_t *)value != 0 : 0;
+}
+
+static void restore_tutorial_gamepad_glyphs(unsigned long frame)
+{
+    if (!frame || frame % 30 || !controller ||
+        st_gptk_context() != ST_GPTK_CONTEXT_GAMEPLAY || !il2_load())
+        return;
+    static int resolved;
+    static Il2CppClass *tutorial;
+    static FieldInfo *mobile_field, *sign_instance_field, *sign_input_field;
+    static FieldInfo *animator_field, *finished_field;
+    static const MethodInfo *find_all, *active_behaviour, *get_go, *get_transform;
+    static const MethodInfo *get_parent, *active_self, *active_hierarchy, *set_active;
+    static const MethodInfo *current_clip;
+    if (!resolved) {
+        resolved = -1;
+        Il2CppClass *touch = il2_class("Assets.Scripts.Controllers.Touch", "TouchController");
+        Il2CppClass *sign = il2_class("Assets.Scripts.Controllers.InputButton", "InputButtonSignController");
+        tutorial = il2_class("Assets.Scripts.SceneObjects", "TutorialArrowButtonSign");
+        Il2CppClass *object = il2_class("UnityEngine", "Object");
+        Il2CppClass *behaviour = il2_class("UnityEngine", "Behaviour");
+        Il2CppClass *component = il2_class("UnityEngine", "Component");
+        Il2CppClass *go = il2_class("UnityEngine", "GameObject");
+        Il2CppClass *transform = il2_class("UnityEngine", "Transform");
+        Il2CppClass *animator = il2_class("", "tk2dSpriteAnimator");
+        if (!touch || !sign || !tutorial || !object || !behaviour ||
+            !component || !go || !transform || !animator)
+            return;
+        mobile_field = il2_field(touch, "<TouchMobileMode>k__BackingField");
+        sign_instance_field = il2_field(sign, "_instance");
+        sign_input_field = il2_field(sign, "currentInput");
+        animator_field = il2_field(tutorial, "infoSignSelectAnimation");
+        finished_field = il2_field(tutorial, "finishGame");
+        find_all = il2_method_p(object, "FindObjectsOfType", 1, "Type");
+        active_behaviour = il2_method(behaviour, "get_isActiveAndEnabled", 0);
+        get_go = il2_method(component, "get_gameObject", 0);
+        get_transform = il2_method(go, "get_transform", 0);
+        get_parent = il2_method(transform, "get_parent", 0);
+        active_self = il2_method(go, "get_activeSelf", 0);
+        active_hierarchy = il2_method(go, "get_activeInHierarchy", 0);
+        set_active = il2_method(go, "SetActive", 1);
+        current_clip = il2_method(animator, "get_CurrentClip", 0);
+        if (mobile_field && sign_instance_field && sign_input_field &&
+            animator_field && finished_field && find_all && active_behaviour &&
+            get_go && get_transform && get_parent && active_self &&
+            active_hierarchy && set_active && current_clip)
+            resolved = 1;
+    }
+    if (resolved < 0)
+        return;
+    uint8_t mobile = 0;
+    void *sign = NULL, *input = NULL;
+    il2_static_get(mobile_field, &mobile);
+    il2_static_get(sign_instance_field, &sign);
+    if (!mobile || !sign)
+        return;
+    il2_field_get(sign, sign_input_field, &input);
+    if (!input || strcmp(il2_class_name(il2_class_of(input)), "XboxGamepadButtons"))
+        return;
+    void *type = il2_type(tutorial);
+    if (!type)
+        return;
+    void *args[1] = {type};
+    void *objects = il2_call(find_all, NULL, args, "active tutorial signs");
+    if (!objects)
+        return;
+    uint32_t count = il2_arr_len(objects);
+    if (count > 16)
+        return;
+    static unsigned glyph_probe_samples;
+    int probe = input_diag && glyph_probe_samples++ < 4;
+    if (probe)
+        fprintf(stderr, "[st/input] tutorial glyph candidates=%u\n", count);
+    for (uint32_t i = 0; i < count; ++i) {
+        void *object = il2_arr_at(objects, i), *animator = NULL;
+        uint8_t finished = 0;
+        if (!object)
+            continue;
+        il2_field_get(object, finished_field, &finished);
+        il2_field_get(object, animator_field, &animator);
+        int enabled = glyph_bool(active_behaviour, object);
+        void *clip = animator ? il2_call(current_clip, animator, NULL, "selected tutorial animation") : NULL;
+        void *go = animator ? il2_call(get_go, animator, NULL, "tutorial glyph object") : NULL;
+        void *transform = go ? il2_call(get_transform, go, NULL, "tutorial glyph transform") : NULL;
+        void *parent = transform ? il2_call(get_parent, transform, NULL, "tutorial glyph parent") : NULL;
+        void *parent_go = parent ? il2_call(get_go, parent, NULL, "tutorial container") : NULL;
+        if (probe) {
+            char clip_name[96] = "none";
+            if (clip) {
+                FieldInfo *name_field = il2_field(il2_class_of(clip), "name");
+                void *name = NULL;
+                if (name_field) il2_field_get(clip, name_field, &name);
+                il2_str_utf8(name, clip_name, sizeof clip_name);
+            }
+            fprintf(stderr, "[st/input] tutorial glyph index=%u enabled=%d finished=%d animator=%d clip=%s active=%d parent_visible=%d\n",
+                    i, enabled, finished, animator != NULL, clip_name,
+                    go ? glyph_bool(active_self, go) : -1,
+                    parent_go ? glyph_bool(active_hierarchy, parent_go) : -1);
+        }
+        if (!enabled || finished || !clip || !go || glyph_bool(active_self, go) ||
+            !parent_go || !glyph_bool(active_hierarchy, parent_go))
+            continue;
+        uint8_t show = 1;
+        void *show_args[1] = {&show};
+        il2_call(set_active, go, show_args, "restore existing gamepad tutorial glyph");
+        if (input_diag)
+            fprintf(stderr, "[st/input] tutorial glyph restored=%d index=%u\n",
+                    glyph_bool(active_self, go), i);
+    }
+}
+
 /* ===== Poll por quadro =================================================== */
 static void sample_controls(void)
 {
@@ -1716,6 +1839,9 @@ void st_input_poll(void *env, void *player, unsigned long frame)
     vpad_poll();
     sample_controls();
     update_engine_context(frame);
+    st_tutorial_return_poll(gui_api_state > 0 && gui_screen_value == 4 &&
+                            st_gptk_context() == ST_GPTK_CONTEXT_MENU);
+    restore_tutorial_gamepad_glyphs(frame);
 
     if (!controller && !vpad_enabled) {
         st_gptk_release_all("controller-unavailable");
@@ -1800,7 +1926,8 @@ void st_input_poll(void *env, void *player, unsigned long frame)
 
     /* ===== Ponteiro auxiliar de menu =====
      * O contrato provado governa a separação: no menu, direito move a seta e
-     * R3/A clicam; no gameplay, direito, R3 e A seguem o jogo nativamente. */
+     * R3 clica; A confirma a seleção nativa. No gameplay, direito, R3 e A
+     * seguem o jogo nativamente. */
     cursor_menu_active = st_gptk_context() == ST_GPTK_CONTEXT_MENU;
     if (!cursor_menu_active) {
         cursor_in_x = cursor_in_y = 0.0f;
@@ -1843,14 +1970,28 @@ void st_input_poll(void *env, void *player, unsigned long frame)
      * saltar várias casas. Gameplay preserva o HAT nativo aprovado. */
     float hx = cursor_menu_active ? 0.0f : (float)(rg - lf);
     float hy = cursor_menu_active ? 0.0f : (float)(dn - up);
+    int native_menu_intent = key_down_state[AKEY_DPAD_UP] ||
+        key_down_state[AKEY_DPAD_DOWN] || key_down_state[AKEY_DPAD_LEFT] ||
+        key_down_state[AKEY_DPAD_RIGHT] || key_down_state[AKEY_BUTTON_A] ||
+        key_down_state[AKEY_BUTTON_B] || key_down_state[AKEY_BUTTON_X] ||
+        key_down_state[AKEY_BUTTON_Y] || key_down_state[AKEY_BUTTON_START] ||
+        key_down_state[AKEY_BACK] || fabsf(ax) > 0.25f || fabsf(ay) > 0.25f;
+    int pointer_intent = cursor_menu_active &&
+        (cursor_click_held || cursor_in_x * cursor_in_x +
+         cursor_in_y * cursor_in_y > 0.18f * 0.18f);
+    update_menu_focus(native_menu_intent, pointer_intent);
     inject(env, player, st_jni_motion_event(ax, ay, az, arz, lt, rt, hx, hy));
     update_cursor(env, player);
 
-    if (input_diag && frame > 0 && frame % 300 == 0)
+    if (input_diag && frame > 0 && frame % 30 == 0)
         fprintf(stderr,
-                "[st/input] diag ctx=%d src=%s scene=%s deliveries=%lu\n",
+                "[st/input] diag ctx=%d src=%s scene=%s deliveries=%lu "
+                "sdl=%.4f,%.4f,%.4f,%.4f android=%.4f,%.4f,%.4f,%.4f "
+                "hat=%.0f,%.0f dpdown=%d touch=%d\n",
                 st_gptk_context(), st_gptk_context_source(), scene_name,
-                st_gptk_delivery_count());
+                st_gptk_delivery_count(), stick_axis(0), stick_axis(1),
+                stick_axis(2), stick_axis(3), ax, ay, az, arz, hx, hy,
+                control_down[NXINPUT_GPTK_DOWN], cursor_click_held);
 }
 
 void st_input_close(void)

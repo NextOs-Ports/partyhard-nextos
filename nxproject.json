@@ -97,7 +97,7 @@
         "Y": "partyhard.action4"
       },
       "menu": {
-        "A": "partyhard.click",
+        "A": "partyhard.action1",
         "B": "partyhard.action2",
         "DOWN": "native",
         "L1": "partyhard.bumper_left",
@@ -215,7 +215,7 @@
         "mode": "0755",
         "path": "partyhard-nextos",
         "role": "executable",
-        "sha256": "1cc69781467f7b1d01ec33b10b2271b637e8a9ae724c57602bd84cfe17280970"
+        "sha256": "2de9aabf65f9640a6041852a5afeb0eb267ce63355b2d4af0c939687ffd31782"
       },
       {
         "mode": "0644",
@@ -840,7 +840,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "INSTALLATION.md",
-      "sha256": "02f01fded03ac4c244e98caceb9b8b5f0082009f675b95a7ac2349c274e1b0b2"
+      "sha256": "955a44d149ca80ff7cfc787cf575504e53bda10cc8cb5691f3c22e1766ab3be5"
     },
     {
       "kind": "license-notice",
@@ -864,13 +864,13 @@
       "kind": "payload",
       "mode": "0644",
       "path": "README.md",
-      "sha256": "984bb22d5d89f331c7cd84232a3317db44764cbe76c662da7cafe6771863e066"
+      "sha256": "e69022cd22fcad58b0848d9af89a14cf43b4ea64475daa96000987b4abf1e530"
     },
     {
       "kind": "payload",
       "mode": "0644",
       "path": "RELEASE-METADATA.json",
-      "sha256": "a785894ade61752f6465b35d8e34d6a8950667bcd27800df689d46579733a10d"
+      "sha256": "c4d69e619af45c85a8e10d8908636b813ee30f84b5cd6b6541f4b09c0321b0d9"
     },
     {
       "kind": "payload",
@@ -888,7 +888,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "version.txt",
-      "sha256": "d1b77b88f4b9f675a900e4143ac768a21218623cfe1703ca43162388c3271bd6"
+      "sha256": "8c54bfab7f1ae9bd1a7148eae41e7b0a8f4ad3726e0cac70f823a2d45db9e60c"
     }
   ],
   "portmaster": {

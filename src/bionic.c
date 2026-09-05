@@ -519,6 +519,39 @@ static unsigned long my_getauxval(unsigned long t)
     return v;
 }
 
+/* Guest-only PCM guard: Unity's unwinder probes mapped files as ELF and can
+ * block opening the PCM already owned by the host audio thread. */
+static int guest_pcm_path(const char *path)
+{
+    const char prefix[] = "/dev/snd/pcmC";
+    if (!path || strncmp(path, prefix, sizeof prefix - 1)) return 0;
+    path += sizeof prefix - 1;
+    if (*path < '0' || *path > '9') return 0;
+    do { ++path; } while (*path >= '0' && *path <= '9');
+    if (*path != 'D') return 0;
+    ++path;
+    if (*path < '0' || *path > '9') return 0;
+    do { ++path; } while (*path >= '0' && *path <= '9');
+    return (*path == 'p' || *path == 'c') && path[1] == '\0';
+}
+
+#define GUEST_PCM_OPEN(name) \
+static int my_##name(const char *path, int flags, ...) \
+{ \
+    if ((flags & O_ACCMODE) == O_RDONLY && guest_pcm_path(path)) { \
+        errno = EACCES; return -1; \
+    } \
+    if ((flags & O_CREAT) || (flags & O_TMPFILE) == O_TMPFILE) { \
+        va_list ap; va_start(ap, flags); \
+        mode_t mode = va_arg(ap, mode_t); va_end(ap); \
+        return name(path, flags, mode); \
+    } \
+    return name(path, flags); \
+}
+GUEST_PCM_OPEN(open)
+GUEST_PCM_OPEN(open64)
+#undef GUEST_PCM_OPEN
+
 static int my_stat(const char *path, struct stat *st)
 {
     int r = stat(path, st);
@@ -958,7 +991,7 @@ static nx_import tab[] = {
     M(getauxval), M(stat), M(opendir),
 
     /* files */
-    E(open), E(open64), E(openat), E(close), E(read), E(write), E(pread),
+    M(open), M(open64), E(openat), E(close), E(read), E(write), E(pread),
     E(pwrite), E(pread64), E(pwrite64), E(readv), E(writev), E(lseek),
     E(lseek64), E(fstat), E(lstat), E(fstatat), E(statfs),
     { "stat64", (void *)(uintptr_t)my_stat64 },
