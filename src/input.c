@@ -47,6 +47,8 @@
 #define _GNU_SOURCE
 #include <SDL2/SDL.h>
 #include <dlfcn.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <math.h>
 #include <signal.h>
 #include <stdint.h>
@@ -54,6 +56,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "gb.h"
@@ -64,6 +68,7 @@
 #include "nxinput_gptk.h"
 #include "nxinput_exit_chord.h"
 #include "input_gptk.h"
+#include "input_guard.h"
 #include "tutorial_return.h"
 #include "nxinput_padset.h"
 
@@ -103,6 +108,17 @@ static volatile sig_atomic_t exit_requested;
 static volatile sig_atomic_t signal_exit;
 static int input_fatal;
 static int input_diag; /* só na bancada (-DST_BENCH_PROBES + env) */
+#ifdef ST_BENCH_PROBES
+static int input_engine_probe;
+static float probe_sdl_x, probe_sdl_y;
+static float probe_android_x, probe_android_y;
+static float probe_hat_x, probe_hat_y;
+static int probe_dpad_up, probe_dpad_down, probe_dpad_left, probe_dpad_right;
+/* Faults injected underneath the guard, emulating a cached SDL state whose
+ * physical release/centering event was lost. Private bench binary only. */
+static int bench_stale_button = -1;
+static int bench_stale_axis = -1;
+#endif
 static void *input_last_env;
 static void *input_last_player;
 static int touch_origin_x;
@@ -129,6 +145,286 @@ static void *optional_sdl(const char *name)
     return dlsym(RTLD_DEFAULT, name);
 }
 
+/* ===== Snapshot neutro do no exato admitido ============================
+ *
+ * Alguns CFWs RK3326 perdem raramente uma transicao de release na fila que
+ * alimenta a SDL. A fila passa a dizer "pressionado" para sempre, embora o
+ * snapshot atual do kernel ja esteja neutro. A protecao abaixo NAO mapeia
+ * controles, nao varre /dev/input e nunca fabrica um estado pressionado:
+ * associa somente o no de evento fornecido pela propria SDL ao instance
+ * admitido e usa o kernel apenas para vereditos seguros de neutralidade:
+ *
+ *   - nenhum EV_KEY fisico esta pressionado -> um botao SDL, cuja propria
+ *     bind e BUTTON, nao pode continuar pressionado;
+ *   - o HAT indicado pela bind da SDL esta no centro -> o D-pad nao pode
+ *     continuar pressionado;
+ *   - o eixo fisico indicado pela bind AXIS da SDL esta no centro -> o stick
+ *     esquerdo/direito nao pode continuar fora do centro.
+ *
+ * Qualquer caminho ausente, bind de outro tipo ou ioctl incerto falha aberto
+ * para o comportamento SDL original. GPTK e a SDL continuam soberanos. */
+#define ST_INPUT_GUARD_PATH_MAX 96
+typedef struct st_input_guard {
+    SDL_GameController *controller;
+    SDL_JoystickID instance;
+    int fd;
+    int key_available;
+    int key_snapshot_valid;
+    int key_idle;
+    uint8_t key_backed[SDL_CONTROLLER_BUTTON_MAX];
+    int8_t button_hat[SDL_CONTROLLER_BUTTON_MAX];
+    unsigned long key_capabilities[PH_INPUT_KEY_WORDS];
+    unsigned long abs_capabilities[PH_INPUT_ABS_WORDS];
+    uint8_t hat_supported[4];
+    uint8_t hat_snapshot_valid[4];
+    uint8_t hat_centered[4];
+    int stick_abs_code[4];
+    uint8_t stick_snapshot_valid[4];
+    uint8_t stick_centered[4];
+    int button_heal_logged;
+    uint8_t axis_heal_logged[4];
+    char path[ST_INPUT_GUARD_PATH_MAX];
+} st_input_guard;
+
+static st_input_guard input_guards[NXINPUT_PADSET_MAX];
+static unsigned input_guard_count;
+
+static int st_input_event_path(const char *path)
+{
+    /* The path is identity supplied by SDL, never a discovery prefix. Keep
+     * it inside the kernel input subtree, reject traversal/control bytes,
+     * then let O_NOFOLLOW + fstat(S_ISCHR) establish the object type. */
+    static const char device_root[] = "/dev/input/";
+    if (!path || strncmp(path, device_root, sizeof device_root - 1) != 0 ||
+        strlen(path) >= ST_INPUT_GUARD_PATH_MAX)
+        return 0;
+    const char *suffix = path + sizeof device_root - 1;
+    if (!*suffix || !strcmp(suffix, ".") || !strcmp(suffix, ".."))
+        return 0;
+    for (const char *p = suffix; *p; p++) {
+        if ((unsigned char)*p < 0x20 || *p == 0x7f)
+            return 0;
+        if ((p == suffix || p[-1] == '/') && p[0] == '.' &&
+            (p[1] == '/' || p[1] == '\0' ||
+             (p[1] == '.' && (p[2] == '/' || p[2] == '\0'))))
+            return 0;
+    }
+    return 1;
+}
+
+static st_input_guard *st_input_guard_for_controller(void *controller_ptr)
+{
+    for (unsigned i = 0; i < input_guard_count; i++)
+        if (input_guards[i].controller == controller_ptr)
+            return &input_guards[i];
+    return NULL;
+}
+
+static void st_input_guard_drop(unsigned index)
+{
+    if (index >= input_guard_count)
+        return;
+    if (input_guards[index].fd >= 0)
+        close(input_guards[index].fd);
+    for (unsigned i = index; i + 1 < input_guard_count; i++)
+        input_guards[i] = input_guards[i + 1];
+    input_guard_count--;
+    memset(&input_guards[input_guard_count], 0,
+           sizeof input_guards[input_guard_count]);
+    input_guards[input_guard_count].fd = -1;
+}
+
+static void st_input_guard_remove(SDL_JoystickID instance)
+{
+    for (unsigned i = 0; i < input_guard_count; i++) {
+        if (input_guards[i].instance == instance) {
+            st_input_guard_drop(i);
+            return;
+        }
+    }
+}
+
+static void st_input_guard_close_all(void)
+{
+    while (input_guard_count)
+        st_input_guard_drop(input_guard_count - 1);
+}
+
+static void st_input_guard_attach(int sdl_index,
+                                  SDL_GameController *opened,
+                                  SDL_JoystickID instance)
+{
+    const char *path = st_sdl_path_for_index
+                     ? st_sdl_path_for_index(sdl_index) : NULL;
+    if (!opened || input_guard_count >= NXINPUT_PADSET_MAX ||
+        !st_input_event_path(path) ||
+        !st_sdl_instance_for_index ||
+        st_sdl_instance_for_index(sdl_index) != instance) {
+        fprintf(stderr, "[st/input] release guard: instance=%d unavailable; "
+                        "SDL passthrough preserved\n", (int)instance);
+        return;
+    }
+
+    int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC | O_NOFOLLOW);
+    struct stat info;
+    if (fd < 0 || fstat(fd, &info) != 0 || !S_ISCHR(info.st_mode)) {
+        if (fd >= 0)
+            close(fd);
+        fprintf(stderr, "[st/input] release guard: exact node rejected for "
+                        "instance=%d; SDL passthrough preserved\n",
+                (int)instance);
+        return;
+    }
+
+    st_input_guard *guard = &input_guards[input_guard_count];
+    memset(guard, 0, sizeof *guard);
+    guard->fd = fd;
+    guard->controller = opened;
+    guard->instance = instance;
+    snprintf(guard->path, sizeof guard->path, "%s", path);
+    for (int b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++)
+        guard->button_hat[b] = -1;
+    for (int a = 0; a < 4; a++)
+        guard->stick_abs_code[a] = -1;
+
+    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof guard->key_capabilities),
+              guard->key_capabilities) >= 0) {
+        for (size_t word = 0; word < PH_INPUT_KEY_WORDS; word++) {
+            if (guard->key_capabilities[word]) {
+                guard->key_available = 1;
+                break;
+            }
+        }
+    }
+    int guarded_hats = 0;
+    int guarded_axes = 0;
+    if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof guard->abs_capabilities),
+              guard->abs_capabilities) >= 0) {
+        for (int h = 0; h < 4; h++) {
+            int xcode = ABS_HAT0X + h * 2;
+            int ycode = xcode + 1;
+            if (ph_input_test_bit(guard->abs_capabilities,
+                                  PH_INPUT_ABS_WORDS, xcode) &&
+                ph_input_test_bit(guard->abs_capabilities,
+                                  PH_INPUT_ABS_WORDS, ycode)) {
+                guard->hat_supported[h] = 1;
+                guarded_hats++;
+            }
+        }
+        for (int a = 0; a < 4; a++) {
+            SDL_GameControllerButtonBind bind = SDL_GameControllerGetBindForAxis(
+                opened, (SDL_GameControllerAxis)a);
+            if (bind.bindType != SDL_CONTROLLER_BINDTYPE_AXIS)
+                continue;
+            int code = ph_input_abs_code_for_sdl_axis(
+                guard->abs_capabilities, PH_INPUT_ABS_WORDS,
+                bind.value.axis);
+            if (code >= 0) {
+                guard->stick_abs_code[a] = code;
+                guarded_axes++;
+            }
+        }
+    }
+
+    for (int b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++) {
+        SDL_GameControllerButtonBind bind = SDL_GameControllerGetBindForButton(
+            opened, (SDL_GameControllerButton)b);
+        if (bind.bindType == SDL_CONTROLLER_BINDTYPE_BUTTON &&
+            guard->key_available) {
+            guard->key_backed[b] = 1;
+        } else if (bind.bindType == SDL_CONTROLLER_BINDTYPE_HAT &&
+                   bind.value.hat.hat >= 0 && bind.value.hat.hat < 4 &&
+                   guard->hat_supported[bind.value.hat.hat]) {
+            guard->button_hat[b] = (int8_t)bind.value.hat.hat;
+        }
+    }
+
+    if (!guard->key_available && !guarded_hats && !guarded_axes) {
+        close(fd);
+        memset(guard, 0, sizeof *guard);
+        guard->fd = -1;
+        fprintf(stderr, "[st/input] release guard: no safe snapshot for "
+                        "instance=%d; SDL passthrough preserved\n",
+                (int)instance);
+        return;
+    }
+    input_guard_count++;
+    fprintf(stderr,
+            "[st/input] release guard: instance=%d exact=%s keys=%s "
+            "hats=%d centered_axes=%d policy=neutral-only\n",
+            (int)instance, guard->path,
+            guard->key_available ? "ready" : "unavailable",
+            guarded_hats, guarded_axes);
+}
+
+static void st_input_guard_snapshot_all(void)
+{
+    for (unsigned i = 0; i < input_guard_count; i++) {
+        st_input_guard *guard = &input_guards[i];
+        if (guard->key_available) {
+            unsigned long state[PH_INPUT_KEY_WORDS];
+            memset(state, 0, sizeof state);
+            if (ioctl(guard->fd, EVIOCGKEY(sizeof state), state) >= 0) {
+                guard->key_snapshot_valid = 1;
+                guard->key_idle = !ph_input_any_key_pressed(
+                    state, guard->key_capabilities, PH_INPUT_KEY_WORDS);
+                if (!guard->key_idle)
+                    guard->button_heal_logged = 0;
+            } else {
+                guard->key_snapshot_valid = 0;
+                guard->key_available = 0;
+                fprintf(stderr, "[st/input] release guard: key snapshot failed "
+                                "for instance=%d; SDL passthrough restored\n",
+                        (int)guard->instance);
+            }
+        }
+        for (int h = 0; h < 4; h++) {
+            if (!guard->hat_supported[h])
+                continue;
+            struct input_absinfo xinfo, yinfo;
+            int xcode = ABS_HAT0X + h * 2;
+            int ycode = xcode + 1;
+            if (ioctl(guard->fd, EVIOCGABS(xcode), &xinfo) >= 0 &&
+                ioctl(guard->fd, EVIOCGABS(ycode), &yinfo) >= 0) {
+                guard->hat_snapshot_valid[h] = 1;
+                guard->hat_centered[h] =
+                    ph_input_hat_axis_is_centered(
+                        xinfo.value, xinfo.minimum, xinfo.maximum) &&
+                    ph_input_hat_axis_is_centered(
+                        yinfo.value, yinfo.minimum, yinfo.maximum);
+                if (!guard->hat_centered[h])
+                    guard->button_heal_logged = 0;
+            } else {
+                guard->hat_snapshot_valid[h] = 0;
+                guard->hat_supported[h] = 0;
+                fprintf(stderr, "[st/input] release guard: hat snapshot failed "
+                                "for instance=%d hat=%d; SDL passthrough restored\n",
+                        (int)guard->instance, h);
+            }
+        }
+        for (int a = 0; a < 4; a++) {
+            int code = guard->stick_abs_code[a];
+            if (code < 0)
+                continue;
+            struct input_absinfo absinfo;
+            if (ioctl(guard->fd, EVIOCGABS(code), &absinfo) >= 0) {
+                guard->stick_snapshot_valid[a] = 1;
+                guard->stick_centered[a] = ph_input_axis_is_centered(
+                    absinfo.value, absinfo.minimum, absinfo.maximum,
+                    absinfo.flat, absinfo.fuzz);
+                if (!guard->stick_centered[a])
+                    guard->axis_heal_logged[a] = 0;
+            } else {
+                guard->stick_snapshot_valid[a] = 0;
+                guard->stick_abs_code[a] = -1;
+                fprintf(stderr, "[st/input] release guard: axis snapshot failed "
+                                "for instance=%d axis=%d; SDL passthrough restored\n",
+                        (int)guard->instance, a);
+            }
+        }
+    }
+}
+
 /* ===== Admissão canônica do controle (nxinput C6) ======================= */
 static char st_staged_mapping[NXINPUT_AUTHORITY_SOURCE_MAX];
 static int st_seam_adopted;
@@ -143,9 +439,6 @@ static int st_stage_seam_before_init(void)
                         "(NXC6_SEAM absent); stock SDL behaviour\n");
         return 0;
     }
-    *(void **)&st_sdl_path_for_index = optional_sdl("SDL_JoystickPathForIndex");
-    *(void **)&st_sdl_instance_for_index =
-        optional_sdl("SDL_JoystickGetDeviceInstanceID");
     if (!st_sdl_path_for_index || !st_sdl_instance_for_index) {
         fprintf(stderr, "[st/input] NXC6 seam: this SDL cannot name the "
                         "device node (pre-2.24); staying native\n");
@@ -539,6 +832,21 @@ static void release_all_keys(void)
         if (key_down_state[k])
             deliver_key(k, 0);
     }
+}
+
+/* MotionEvent is level state. Publish an explicit all-zero level at every
+ * lifecycle/input boundary so Unity cannot retain the last stick/HAT vector
+ * while the controller is unavailable or the frame loop is leaving. */
+static void deliver_neutral_motion(const char *reason)
+{
+    if (!input_last_env || !input_last_player)
+        return;
+    inject(input_last_env, input_last_player,
+           st_jni_motion_event(0.0f, 0.0f, 0.0f, 0.0f,
+                               0.0f, 0.0f, 0.0f, 0.0f));
+    if (input_diag)
+        fprintf(stderr, "[st/input] neutral motion reason=%s\n",
+                reason ? reason : "boundary");
 }
 
 static void sink_key(int keycode, int pressed)
@@ -1474,6 +1782,7 @@ static void padset_opened(int i, unsigned slot, void *opened_ptr, void *user)
             product & 0xffff, mapping ? mapping : "unavailable");
     fprintf(stderr, "[st/input] pad slot=%d instance=%d sdl_index=%d\n",
             slot, (int)padset.instances[slot], i);
+    st_input_guard_attach(i, opened, padset.instances[slot]);
     SDL_free(mapping);
 }
 
@@ -1491,9 +1800,74 @@ static void *ps_open(int i) { return SDL_GameControllerOpen(i); }
 static void ps_close(void *c) { SDL_GameControllerClose(c); }
 static void *ps_get_joystick(void *c) { return SDL_GameControllerGetJoystick(c); }
 static int32_t ps_joystick_instance(void *j) { return (int32_t)SDL_JoystickInstanceID(j); }
-static void ps_update(void) { SDL_GameControllerUpdate(); }
-static uint8_t ps_get_button(void *c, int b) { return SDL_GameControllerGetButton(c, (SDL_GameControllerButton)b); }
-static int16_t ps_get_axis(void *c, int a) { return SDL_GameControllerGetAxis(c, (SDL_GameControllerAxis)a); }
+static void ps_update(void)
+{
+    SDL_GameControllerUpdate();
+    st_input_guard_snapshot_all();
+}
+
+static uint8_t ps_get_button(void *c, int b)
+{
+    uint8_t raw = SDL_GameControllerGetButton(
+        c, (SDL_GameControllerButton)b) ? 1u : 0u;
+#ifdef ST_BENCH_PROBES
+    if (b == bench_stale_button)
+        raw = 1u;
+#endif
+    st_input_guard *guard = st_input_guard_for_controller(c);
+    int valid_button = guard && b >= 0 && b < SDL_CONTROLLER_BUTTON_MAX;
+    int hat = valid_button ? guard->button_hat[b] : -1;
+    int snapshot_valid = 0;
+    int physically_neutral = 0;
+    int binding_supported = 0;
+    if (valid_button && guard->key_backed[b]) {
+        snapshot_valid = guard->key_snapshot_valid;
+        physically_neutral = guard->key_idle;
+        binding_supported = 1;
+    } else if (hat >= 0 && hat < 4 && guard->hat_supported[hat]) {
+        snapshot_valid = guard->hat_snapshot_valid[hat];
+        physically_neutral = guard->hat_centered[hat];
+        binding_supported = 1;
+    }
+    uint8_t filtered = (uint8_t)ph_input_guard_button_value(
+        raw, snapshot_valid, physically_neutral, binding_supported);
+    if (guard && raw && !filtered) {
+        if (!guard->button_heal_logged) {
+            fprintf(stderr,
+                    "[st/input] release guard: corrected stale SDL button "
+                    "instance=%d button=%d (kernel neutral)\n",
+                    (int)guard->instance, b);
+            guard->button_heal_logged = 1;
+        }
+    }
+    return filtered;
+}
+
+static int16_t ps_get_axis(void *c, int a)
+{
+    int16_t raw = SDL_GameControllerGetAxis(
+        c, (SDL_GameControllerAxis)a);
+#ifdef ST_BENCH_PROBES
+    if (a == bench_stale_axis)
+        raw = 32767;
+#endif
+    st_input_guard *guard = st_input_guard_for_controller(c);
+    int valid_axis = guard && a >= 0 && a < 4;
+    int16_t filtered = (int16_t)ph_input_guard_axis_value(
+        raw,
+        valid_axis ? guard->stick_snapshot_valid[a] : 0,
+        valid_axis ? guard->stick_centered[a] : 0);
+    if (guard && raw && !filtered) {
+        if (!guard->axis_heal_logged[a]) {
+            fprintf(stderr,
+                    "[st/input] release guard: corrected stale SDL axis "
+                    "instance=%d axis=%d (kernel centered)\n",
+                    (int)guard->instance, a);
+            guard->axis_heal_logged[a] = 1;
+        }
+    }
+    return filtered;
+}
 
 static int padset_setup(void)
 {
@@ -1528,6 +1902,7 @@ static void open_controller(void)
 
 static void close_controller(void)
 {
+    st_input_guard_close_all();
     nxinput_padset_close_all(&padset);
     controller = NULL;
     memset(buttons, 0, sizeof buttons);
@@ -1548,13 +1923,21 @@ int st_input_init(void)
 {
 #ifdef ST_BENCH_PROBES
     input_diag = getenv("ST_INPUT_DIAG") != NULL;
+    input_engine_probe = getenv("ST_INPUT_ENGINE_PROBE") != NULL;
     vpad_enabled = getenv("ST_VPAD") && strcmp(getenv("ST_VPAD"), "0") != 0;
     if (getenv("ST_VPAD_FILE") && *getenv("ST_VPAD_FILE"))
         vpad_file = getenv("ST_VPAD_FILE");
+    if (getenv("ST_INPUT_STALE_BUTTON"))
+        bench_stale_button = atoi(getenv("ST_INPUT_STALE_BUTTON"));
+    if (getenv("ST_INPUT_STALE_AXIS"))
+        bench_stale_axis = atoi(getenv("ST_INPUT_STALE_AXIS"));
 #endif
     /* Disparo no PRIMEIRO quadro em que SELECT e START estão ambos lógicos
      * (regra #40: chord sem hold/atraso); nada do chord vaza ao jogo. */
     nxinput_exit_chord_init(&exit_chord, 1);
+    *(void **)&st_sdl_path_for_index = optional_sdl("SDL_JoystickPathForIndex");
+    *(void **)&st_sdl_instance_for_index =
+        optional_sdl("SDL_JoystickGetDeviceInstanceID");
     *(void **)&st_sdl_joy_vendor = optional_sdl("SDL_JoystickGetVendor");
     *(void **)&st_sdl_joy_product = optional_sdl("SDL_JoystickGetProduct");
 
@@ -1799,6 +2182,20 @@ static void sample_controls(void)
         for (int c = 0; c < NXINPUT_GPTK_CONTROL_COUNT; c++)
             if (vpad_frames[c] > 0)
                 control_down[c] = 1;
+
+    unsigned conflicts = ph_input_resolve_dpad(
+        &control_down[NXINPUT_GPTK_UP],
+        &control_down[NXINPUT_GPTK_DOWN],
+        &control_down[NXINPUT_GPTK_LEFT],
+        &control_down[NXINPUT_GPTK_RIGHT]);
+    static unsigned previous_conflicts;
+    if (conflicts && conflicts != previous_conflicts)
+        fprintf(stderr,
+                "[st/input] D-pad limiter: contradictory pair cancelled "
+                "(vertical=%d horizontal=%d)\n",
+                !!(conflicts & PH_INPUT_DPAD_CONFLICT_VERTICAL),
+                !!(conflicts & PH_INPUT_DPAD_CONFLICT_HORIZONTAL));
+    previous_conflicts = conflicts;
 }
 
 void st_input_poll(void *env, void *player, unsigned long frame)
@@ -1821,18 +2218,23 @@ void st_input_poll(void *env, void *player, unsigned long frame)
             open_controller();
         if (event.type == SDL_JOYDEVICEREMOVED && st_seam_adopted)
             nxc6_forget((int)event.jdevice.which);
-        if (event.type == SDL_CONTROLLERDEVICEREMOVED &&
-            nxinput_padset_remove_instance(&padset, event.cdevice.which)) {
-            controller = nxinput_padset_first(&padset);
-            st_gptk_release_all("controller-removed");
-            release_all_keys();
-            cursor_click_from_sink = 0;
-            open_controller();
+        if (event.type == SDL_CONTROLLERDEVICEREMOVED) {
+            st_input_guard_remove(event.cdevice.which);
+            if (nxinput_padset_remove_instance(&padset,
+                                               event.cdevice.which)) {
+                controller = nxinput_padset_first(&padset);
+                st_gptk_release_all("controller-removed");
+                release_all_keys();
+                deliver_neutral_motion("controller-removed");
+                cursor_click_from_sink = 0;
+                open_controller();
+            }
         }
         if (event.type == SDL_WINDOWEVENT &&
             event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
             st_gptk_release_all("focus-lost");
             release_all_keys();
+            deliver_neutral_motion("focus-lost");
             cursor_click_from_sink = 0;
         }
     }
@@ -1846,6 +2248,7 @@ void st_input_poll(void *env, void *player, unsigned long frame)
     if (!controller && !vpad_enabled) {
         st_gptk_release_all("controller-unavailable");
         release_all_keys();
+        deliver_neutral_motion("controller-unavailable");
         return;
     }
 
@@ -1861,6 +2264,7 @@ void st_input_poll(void *env, void *player, unsigned long frame)
         exit_requested = 1;
         st_gptk_release_all("exit-chord");
         release_all_keys();
+        deliver_neutral_motion("exit-chord");
         return;
     }
 
@@ -1897,6 +2301,7 @@ void st_input_poll(void *env, void *player, unsigned long frame)
                         "reproduzir nativamente\n");
         exit_requested = 1;
         release_all_keys();
+        deliver_neutral_motion("input-fatal");
         return;
     }
 
@@ -1905,6 +2310,9 @@ void st_input_poll(void *env, void *player, unsigned long frame)
         int keycode = st_native_keycode(c);
         if (!keycode)
             continue;
+        /* One native route for every symbolic control. In this game the
+         * Android DPAD KeyEvents drive both menu and CharController; the
+         * HAT-only differential below measured engine=0 during gameplay. */
         int desired = control_down[c] && !st_gptk_should_consume(c);
         if (!desired && sink_key_pressed[keycode])
             continue;
@@ -1936,11 +2344,11 @@ void st_input_poll(void *env, void *player, unsigned long frame)
     cursor_click_held = cursor_menu_active && cursor_click_from_sink;
 
     /* ===== MotionEvent do quadro: X/Y (esquerdo), Z/RZ (direito), gatilhos
-     * e HAT (D-pad nativo).  Fontes por eixo, sem dupla entrega:
+     * e HAT neutro. Fontes por eixo, sem dupla entrega:
      *   X/Y   <- partyhard.move (sink) OU LEFT_STICK native
      *   Z/RZ  <- RIGHT_STICK native (consumido pela seta: 0)
      *   L/RTRIGGER <- L2/R2 native (junto do KEYCODE_BUTTON_L2/R2 nativo)
-     *   HAT   <- D-pad native */
+     *   HAT   <- 0 (o D-pad deste jogo usa somente KeyEvent) */
     float ax = 0.0f, ay = 0.0f, az = 0.0f, arz = 0.0f, lt = 0.0f, rt = 0.0f;
     if (move_vector_this_frame) {
         ax = move_axis_x;
@@ -1957,19 +2365,27 @@ void st_input_poll(void *env, void *player, unsigned long frame)
         lt = trigger_value[0];
     if (!st_gptk_should_consume(NXINPUT_GPTK_R2))
         rt = trigger_value[1];
-    int up = control_down[NXINPUT_GPTK_UP] &&
-             !st_gptk_should_consume(NXINPUT_GPTK_UP);
-    int dn = control_down[NXINPUT_GPTK_DOWN] &&
-             !st_gptk_should_consume(NXINPUT_GPTK_DOWN);
-    int lf = control_down[NXINPUT_GPTK_LEFT] &&
-             !st_gptk_should_consume(NXINPUT_GPTK_LEFT);
-    int rg = control_down[NXINPUT_GPTK_RIGHT] &&
-             !st_gptk_should_consume(NXINPUT_GPTK_RIGHT);
-    /* No menu os quatro KeyEvents acima já entregam uma borda por pressão.
-     * Repetir o mesmo D-pad também como HAT a cada frame fazia a seleção
-     * saltar várias casas. Gameplay preserva o HAT nativo aprovado. */
-    float hx = cursor_menu_active ? 0.0f : (float)(rg - lf);
-    float hy = cursor_menu_active ? 0.0f : (float)(dn - up);
+    /* Duplicar esses KeyEvents como HAT causou saltos no menu e entregou duas
+     * autoridades ao gameplay. O diferencial físico de 05/09/2026 provou
+     * que Party Hard lê os KeyEvents e ignora HAT sozinho; mantenha zero. */
+    float hx = 0.0f;
+    float hy = 0.0f;
+#ifdef ST_BENCH_PROBES
+    probe_sdl_x = lx;
+    probe_sdl_y = ly;
+    probe_android_x = ax;
+    probe_android_y = ay;
+    probe_hat_x = hx;
+    probe_hat_y = hy;
+    probe_dpad_up = control_down[NXINPUT_GPTK_UP] &&
+                    !st_gptk_should_consume(NXINPUT_GPTK_UP);
+    probe_dpad_down = control_down[NXINPUT_GPTK_DOWN] &&
+                      !st_gptk_should_consume(NXINPUT_GPTK_DOWN);
+    probe_dpad_left = control_down[NXINPUT_GPTK_LEFT] &&
+                      !st_gptk_should_consume(NXINPUT_GPTK_LEFT);
+    probe_dpad_right = control_down[NXINPUT_GPTK_RIGHT] &&
+                       !st_gptk_should_consume(NXINPUT_GPTK_RIGHT);
+#endif
     int native_menu_intent = key_down_state[AKEY_DPAD_UP] ||
         key_down_state[AKEY_DPAD_DOWN] || key_down_state[AKEY_DPAD_LEFT] ||
         key_down_state[AKEY_DPAD_RIGHT] || key_down_state[AKEY_BUTTON_A] ||
@@ -1994,10 +2410,92 @@ void st_input_poll(void *env, void *player, unsigned long frame)
                 control_down[NXINPUT_GPTK_DOWN], cursor_click_held);
 }
 
+#ifdef ST_BENCH_PROBES
+/* The adapter-side numbers are not enough to prove a neutral release: this
+ * game reads Assets.Scripts.Char.CharController.Hor/Vert, which can fall
+ * through from InControl to UnityEngine.Input.GetAxis. Read those exact
+ * properties after nativeRender, on the already-attached Unity main thread.
+ * This is private measurement code and is absent from public builds. */
+void st_input_post_render_probe(unsigned long frame)
+{
+    static int state;
+    static const MethodInfo *get_hor, *get_vert;
+    static float previous_hor, previous_vert;
+    static int previous_active = -1;
+    static unsigned neutral_tail;
+
+    if (!input_engine_probe || frame < 1 ||
+        st_gptk_context() != ST_GPTK_CONTEXT_GAMEPLAY)
+        return;
+    if (!state) {
+        state = -1;
+        if (!il2_load())
+            return;
+        Il2CppClass *controller_class =
+            il2_class("Assets.Scripts.Char", "CharController");
+        get_hor = controller_class
+                ? il2_method(controller_class, "get_Hor", 0) : NULL;
+        get_vert = controller_class
+                 ? il2_method(controller_class, "get_Vert", 0) : NULL;
+        if (!get_hor || !get_vert) {
+            fprintf(stderr, "[st/input-probe] CharController.Hor/Vert unavailable\n");
+            return;
+        }
+        state = 1;
+        fprintf(stderr, "[st/input-probe] CharController.Hor/Vert ready\n");
+    }
+    if (state < 0)
+        return;
+
+    void *hor_value = il2_unbox(il2_call(get_hor, NULL, NULL,
+                                         "CharController.get_Hor probe"));
+    void *vert_value = il2_unbox(il2_call(get_vert, NULL, NULL,
+                                          "CharController.get_Vert probe"));
+    if (!hor_value || !vert_value) {
+        fprintf(stderr, "[st/input-probe] frame=%lu invoke-failed\n", frame);
+        state = -1;
+        return;
+    }
+    float hor = *(float *)hor_value;
+    float vert = *(float *)vert_value;
+    int active = fabsf(probe_sdl_x) > 0.0001f ||
+                 fabsf(probe_sdl_y) > 0.0001f ||
+                 fabsf(probe_android_x) > 0.0001f ||
+                 fabsf(probe_android_y) > 0.0001f ||
+                 fabsf(probe_hat_x) > 0.0001f ||
+                 fabsf(probe_hat_y) > 0.0001f ||
+                 probe_dpad_up || probe_dpad_down ||
+                 probe_dpad_left || probe_dpad_right;
+    if (active)
+        neutral_tail = 30;
+    else if (neutral_tail)
+        neutral_tail--;
+    int changed = previous_active != active ||
+                  fabsf(hor - previous_hor) > 0.0001f ||
+                  fabsf(vert - previous_vert) > 0.0001f;
+    if (changed || neutral_tail || frame % 60 == 0) {
+        fprintf(stderr,
+                "[st/input-probe] frame=%lu sdl=%.4f,%.4f "
+                "android=%.4f,%.4f hat=%.0f,%.0f dpad=%d%d%d%d "
+                "engine=%.4f,%.4f active=%d tail=%u\n",
+                frame, probe_sdl_x, probe_sdl_y,
+                probe_android_x, probe_android_y,
+                probe_hat_x, probe_hat_y,
+                probe_dpad_up, probe_dpad_down,
+                probe_dpad_left, probe_dpad_right,
+                hor, vert, active, neutral_tail);
+    }
+    previous_hor = hor;
+    previous_vert = vert;
+    previous_active = active;
+}
+#endif
+
 void st_input_close(void)
 {
     st_gptk_release_all("shutdown");
     release_all_keys();
+    deliver_neutral_motion("shutdown");
     close_controller();
     SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK |
                       SDL_INIT_EVENTS);

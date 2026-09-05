@@ -93,8 +93,9 @@ remove também esses dados.
 
 ### Controles
 
-Atualização para 1.0.5: mapas existentes são preservados. Se você nunca editou
-`NEXTOSCONTROLLERS.gptk`, renomeie esse arquivo para
+Atualização para 1.0.6: mapas e saves existentes são preservados; a proteção de
+soltura não exige nenhuma alteração no mapa. Se você vem da 1.0.4 ou anterior e
+nunca editou `NEXTOSCONTROLLERS.gptk`, renomeie esse arquivo para
 `NEXTOSCONTROLLERS.gptk.backup` antes da primeira abertura para receber o novo
 padrão. Se personalizou o mapa, preserve suas alterações e troque apenas
 `A = action:partyhard.click` por `A = action:partyhard.action1` na seção
@@ -117,6 +118,10 @@ editável `NEXTOSCONTROLLERS.gptk` (`NEXTOS_CONTROLLERS/4`, copiado de
 firmware/PortMaster continua sendo a autoridade. A seta nasce visível para
 essa seleção, reaparece ao mover/clicar e, depois do primeiro clique, some
 após quatro segundos sem uso. O botão A permanece sempre nativo e não clica.
+O direcional usa a mesma rota KeyEvent no menu e no gameplay, sem HAT duplicado;
+direções opostas simultâneas são neutralizadas por par. Se a SDL perder uma
+soltura, o port só limpa o valor preso quando o nó físico daquele mesmo controle
+prova repouso, sem varrer dispositivos ou inventar comandos.
 
 ### Opções de vídeo
 
@@ -223,7 +228,8 @@ those files too.
 
 ### Controls
 
-Updating to 1.0.5 preserves existing maps. If you never edited
+Updating to 1.0.6 preserves existing maps and saves; the release guard requires
+no mapping change. If you are coming from 1.0.4 or older and never edited
 `NEXTOSCONTROLLERS.gptk`, rename it to `NEXTOSCONTROLLERS.gptk.backup` before
 launching to receive the new default. For a customized map, keep your edits
 and only replace `A = action:partyhard.click` with
@@ -248,6 +254,11 @@ physical mapping remains the authority. The arrow starts visible for this
 selector, returns when moved/clicked, and hides after four idle seconds once
 the first click has happened. A always remains a native game button and never
 becomes pointer click.
+The D-pad uses the same KeyEvent route in menus and gameplay, without a
+duplicate HAT; simultaneous opposite directions are neutralized per pair. If
+SDL loses a release, the port clears the latched value only when that exact
+controller's physical node proves it is idle, without scanning devices or
+inventing commands.
 
 ### Video options
 

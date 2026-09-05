@@ -4,10 +4,11 @@
 
 ## English
 
-Version 1.0.5 fixes menu focus, native A confirmation, the pointer on control
-selection dialogs, and re-entry after leaving the unfinished tutorial. The
-framework remains the same as 1.0.4. Involuntary movement reported on
-muOS/ROCKNIX has not been verified as fixed; the missing tutorial stick glyph
+Version 1.0.6 fixes movement that could remain latched after releasing the
+D-pad or left stick. It preserves the 1.0.5 menu, native A confirmation,
+pointer and unfinished-tutorial fixes, and keeps the same immutable framework
+as 1.0.4. This input fix was physically verified on K36S/dArkOS; it has not
+yet been physically verified on muOS/ROCKNIX. The missing tutorial stick glyph
 is still a known presentation limitation.
 
 Party Hard GO 0.100038 runs through a native AArch64 Unity 6 IL2CPP loader and
@@ -80,7 +81,7 @@ use, preserving the native firmware mapping on every other provider.
 | Left stick | `partyhard.move` (vector, radial deadzone 0.15) | AXIS_X / AXIS_Y |
 | Right stick | menu pointer; native in gameplay | arrow / AXIS_Z + AXIS_RZ |
 | R3 | menu click; native in gameplay | Android touch / keycode 107 |
-| D-pad, L2 / R2, L3, SELECT | native | menu D-pad uses one KeyEvent edge; gameplay retains HAT |
+| D-pad, L2 / R2, L3, SELECT | native | D-pad uses one Android KeyEvent route in menu and gameplay |
 | SELECT + START | sovereign exit chord (framework, outside the file) | |
 
 Contexts follow the engine's static `App.View.Gui._screenType`: `GameScreen`
@@ -101,11 +102,22 @@ adopt native confirmation on an existing installation.
 The arrow starts visible, returns when moved or clicked, and hides after four
 idle seconds following its first click. The pointer and Android MotionEvent
 share the exact final content rectangle, so the click stays under the arrow
-with bars or stretching on any aspect ratio. Menu D-pad navigation is
-edge-triggered once per press instead of also receiving a continuous HAT.
+with bars or stretching on any aspect ratio. D-pad navigation uses one
+KeyEvent route in both menu and gameplay; the duplicate HAT route remains
+neutral. Simultaneous opposite directions cancel only the contradictory pair,
+so the reported LEFT+RIGHT+DOWN+action chord retains DOWN+action without an
+impossible horizontal state.
 Native menu navigation owns selection until the auxiliary pointer is used
 again. This prevents Unity's remembered touch position from reselecting an
 old hovered button after a D-pad press, including pause and Quit dialogs.
+
+Each admitted controller also has a neutral-only release guard. It opens only
+the exact device node identified by SDL and clears a non-zero cached SDL value
+only when the kernel proves that all physical keys are released or that the
+corresponding stick axis is centered. It never scans input devices, creates a
+press, or replaces the firmware mapping; unavailable or inconclusive evidence
+passes the original SDL value through. Focus loss, hot unplug, input failure
+and shutdown additionally publish an explicit neutral MotionEvent.
 
 If the initial tutorial is left before completion, the first poster temporarily
 resumes that tutorial through the game's native start action. It does not unlock
@@ -159,13 +171,21 @@ NXSplash remains visible for five seconds without a skip option.
 
 ### Physical validation
 
-The unchanged AArch64 game runtime identified above was approved on two
-independent device stacks: NextOS with Mali-450 at 1280x720 and dArkOS with
-Mali-G31 at 640x480. Fullscreen video, audio, gameplay, one-step menu D-pad
-navigation, the aligned A/R3 pointer click and SELECT+START exit all passed.
-Release 1.0.4 changes only the generated launcher/framework pin and was gated
-on the host; its exact ZIP has not been physically retested. The 1.0.3
-candidate was invalidated after ArkOS proved its inherited SDL entry was stale.
+The earlier AArch64 runtime was approved on two independent device stacks:
+NextOS with Mali-450 at 1280x720 and dArkOS with Mali-G31 at 640x480.
+Fullscreen video, audio, gameplay, one-step menu D-pad navigation, the aligned
+A/R3 pointer click and SELECT+START exit passed there.
+
+The 1.0.6 input successor was exercised on K36S/dArkOS with a faithful clone of
+the built-in controller. Ten repetitions of LEFT+RIGHT+DOWN+action cancelled
+only LEFT+RIGHT, moved down, emitted no HAT, and returned the game's exact
+`CharController.Hor/Vert` values to zero on the first neutral frame. Individual
+D-pad and analog movement also returned to zero. A private bench-only fault
+injected a permanently stale DOWN button and left-Y axis underneath the guard;
+with the same physical device neutral, gameplay remained at zero throughout.
+The clone was unplugged cleanly and lifecycle exit released every input. These
+results prove the fix on dArkOS, not on muOS/ROCKNIX; no 1.0.6 ZIP is claimed by
+this source-stage validation.
 
 ### Source map and licenses
 
@@ -177,8 +197,8 @@ candidate was invalidated after ArkOS proved its inherited SDL entry was stale.
 - `src/nxgl_frame_proof_adapter.c`, `src/st_graphics_contract.c` and the
   canonical `src/nxgl_graphics_*`: framebuffer proof and graphics contract.
 - `src/audio.c`, `src/opensles_shim.c`: FMOD/PCM output.
-- `src/input.c`, `src/input_gptk.c`, `vendor/nxinput/`: controller, pointer
-  and the live GPTK runtime.
+- `src/input.c`, `src/input_guard.c`, `src/input_gptk.c`, `vendor/nxinput/`:
+  controller, neutral release guard, pointer and the live GPTK runtime.
 - `nxextract/`: public extraction, the asset-pack preparation hook and its
   vendored dependencies used on first launch.
 
@@ -189,11 +209,12 @@ holders.
 
 ## Português
 
-A versão 1.0.5 corrige o foco dos menus, a confirmação nativa com A, o cursor
-na seleção de controles e a retomada do tutorial incompleto. O framework é
-o mesmo da 1.0.4. Movimento involuntário relatado no muOS/ROCKNIX ainda não
-foi validado como corrigido; o glifo ausente do analógico segue como limitação
-de apresentação do tutorial.
+A versão 1.0.6 corrige o movimento que podia ficar preso depois de soltar o
+direcional ou o analógico esquerdo. Ela preserva as correções 1.0.5 de menus,
+confirmação nativa com A, cursor e retomada do tutorial, usando o mesmo
+framework imutável da 1.0.4. A correção de input foi comprovada fisicamente no
+K36S/dArkOS; ainda não foi comprovada no muOS/ROCKNIX. O glifo ausente do
+analógico segue como limitação de apresentação do tutorial.
 
 Party Hard GO 0.100038 roda por um loader Unity 6 IL2CPP AArch64 nativo e pela
 stack SDL2/EGL/GLES2 do sistema. O adapter finalizado preserva a ordem de boot
@@ -251,7 +272,7 @@ hashes, transacional e roda somente sobre dados do dono.
 | Analógico esquerdo | `partyhard.move` (vetor, deadzone radial 0,15) | AXIS_X / AXIS_Y |
 | Analógico direito | ponteiro nos menus; nativo no gameplay | seta / AXIS_Z + AXIS_RZ |
 | R3 | clique nos menus; nativo no gameplay | toque Android / keycode 107 |
-| Direcional, L2 / R2, L3, SELECT | native | D-pad usa uma borda KeyEvent no menu e mantém HAT no gameplay |
+| Direcional, L2 / R2, L3, SELECT | nativo | D-pad usa uma única rota KeyEvent Android no menu e no gameplay |
 | SELECT + START | chord soberano de saída (framework, fora do arquivo) | |
 
 Os contextos seguem o campo estático `App.View.Gui._screenType`: `GameScreen`
@@ -272,11 +293,22 @@ clique do A em menu para adotar a confirmação nativa.
 A seta nasce visível, reaparece ao ser usada e some após quatro
 segundos parada depois do primeiro clique. A seta e o MotionEvent Android usam
 o mesmo retângulo final de conteúdo, mantendo o clique sob a ponta tanto com
-barras quanto esticado, em qualquer proporção. O D-pad navega uma opção por
-pressão no menu, sem a segunda rota HAT contínua.
+barras quanto esticado, em qualquer proporção. O D-pad usa uma única rota
+KeyEvent no menu e no gameplay; a rota HAT duplicada fica neutra. Direções
+opostas simultâneas cancelam somente o par contraditório: no caso relatado
+LEFT+RIGHT+DOWN+ação, DOWN+ação continuam válidos sem o estado horizontal
+impossível.
 A navegação nativa mantém o foco até o ponteiro auxiliar ser usado novamente.
 Isso impede que a última posição de toque guardada pela Unity selecione de
 novo outro botão após o direcional, inclusive no pause e na confirmação de Quit.
+
+Cada controle admitido também recebe uma proteção de soltura exclusivamente
+neutra. Ela abre apenas o nó exato identificado pela SDL e apaga um valor SDL
+obsoleto somente quando o kernel prova que todas as teclas físicas foram soltas
+ou que o eixo correspondente voltou ao centro. Ela não varre dispositivos,
+não fabrica pressão e não substitui o mapping do firmware; prova ausente ou
+inconclusiva mantém o valor SDL original. Perda de foco, desconexão, falha de
+input e encerramento também publicam um MotionEvent explicitamente zerado.
 
 Ao sair do tutorial inicial antes de terminá-lo, o primeiro cartaz permite
 retomar esse tutorial pela ação nativa do jogo. Isso não desbloqueia a primeira
@@ -311,14 +343,21 @@ adivinhação de caminho, limpeza global de `LD_PRELOAD` nem SDL privada.
 
 ### Validação física
 
-O runtime AArch64 do jogo, mantido byte a byte, foi aprovado em duas stacks
-independentes: NextOS com Mali-450 em 1280x720 e dArkOS com Mali-G31 em
-640x480. Passaram vídeo em tela cheia, áudio, gameplay, D-pad de uma opção por
-pressão nos menus, clique alinhado por A/R3 e saída por SELECT+START. A versão
-1.0.4 altera somente o launcher gerado e o pin do framework; seu ZIP exato foi
-validado no host e não recebeu novo teste físico. O candidato 1.0.3 foi
-invalidado quando o ArkOS confirmou que a SDL herdada apontava para um arquivo
-obsoleto.
+O runtime AArch64 anterior foi aprovado em duas stacks independentes: NextOS
+com Mali-450 em 1280x720 e dArkOS com Mali-G31 em 640x480. Passaram vídeo em
+tela cheia, áudio, gameplay, navegação de uma opção por pressão, clique A/R3
+alinhado e saída por SELECT+START.
+
+O sucessor de input 1.0.6 foi exercitado no K36S/dArkOS com um clone fiel do
+controle interno. Dez repetições de LEFT+RIGHT+DOWN+ação cancelaram somente
+LEFT+RIGHT, moveram para baixo sem HAT e devolveram os valores reais
+`CharController.Hor/Vert` a zero no primeiro quadro neutro. Direcional e
+analógico isolados também voltaram a zero. Uma falha exclusiva da bancada
+manteve artificialmente DOWN e o eixo Y obsoletos por baixo da proteção; com o
+mesmo dispositivo fisicamente neutro, o gameplay permaneceu zerado o tempo
+todo. A desconexão do clone e o encerramento soltaram todas as entradas. Isso
+comprova a correção no dArkOS, não no muOS/ROCKNIX; esta validação de fonte não
+declara a existência de um ZIP 1.0.6.
 
 O código do port é GPL-3.0-only. NXSplash é MIT. As licenças das ferramentas
 de extração acompanham seus componentes. Party Hard GO e todo o conteúdo

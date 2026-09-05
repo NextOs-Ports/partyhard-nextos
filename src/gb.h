@@ -71,6 +71,11 @@ int st_input_init(void);
 /* 1 quando o runtime vivo de controles falhou de forma terminal (ACK). */
 int st_input_fatal(void);
 void st_input_poll(void *env, void *player, unsigned long frame);
+#ifdef ST_BENCH_PROBES
+/* Bancada privada: lê, depois de nativeRender, os mesmos Hor/Vert que o
+ * CharLogic consumiu. Nunca é compilado no executável público. */
+void st_input_post_render_probe(unsigned long frame);
+#endif
 void st_input_close(void);
 int st_input_exit_requested(void);
 void st_input_request_exit(void);

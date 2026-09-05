@@ -683,6 +683,9 @@ static void run_unity(void)
             break;
         }
         uint8_t keep = ((uint8_t (*)(void *, void *))render)(env, player);
+#ifdef ST_BENCH_PROBES
+        st_input_post_render_probe(frame);
+#endif
         frame++;
         /* BLACK/DEAD-CONTEXT conclusivo antes do present (nxgl 0.3.5) é
          * terminal: nenhum present a mais, nenhum health, status não zero. */

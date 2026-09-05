@@ -538,7 +538,7 @@ nxbootstrap_runtime_event() {
 # detected by content hash and SELF-HEALED from the chosen complete
 # generation; owner data (gamedata, saves, NEXTOSCONTROLLERS.gptk,
 # NEXTOSSETTINGS.txt) is never touched. Nothing here deletes a generation.
-NXBOOTSTRAP_GENERATION_ID=738eee0cd7d0c98822530f48c0156aa066f8c965d6173a19dec946cd3b221f96
+NXBOOTSTRAP_GENERATION_ID=d9d9517ea75d9a801b9d15ca25a4385363ac72dcf6b67f58ad495c19c48bb019
 NXBOOTSTRAP_GENERATION_FORMAT=2
 # V5 owner runtime (nxport owner_runtime="1"): port-env.sh is a LIVE OWNER
 # file seeded once from defaults/, never healed, never a generation member;

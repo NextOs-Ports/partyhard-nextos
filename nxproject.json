@@ -215,7 +215,7 @@
         "mode": "0755",
         "path": "partyhard-nextos",
         "role": "executable",
-        "sha256": "2de9aabf65f9640a6041852a5afeb0eb267ce63355b2d4af0c939687ffd31782"
+        "sha256": "08a9f52622f6471d74e8fe46980380e62bc0d14c34f79b588c8a0866ce9d6f24"
       },
       {
         "mode": "0644",
@@ -840,7 +840,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "INSTALLATION.md",
-      "sha256": "955a44d149ca80ff7cfc787cf575504e53bda10cc8cb5691f3c22e1766ab3be5"
+      "sha256": "cbe1fba833bba758370640e8a6f67d561c677d596b5915eb682fed86fc74c4d9"
     },
     {
       "kind": "license-notice",
@@ -864,13 +864,13 @@
       "kind": "payload",
       "mode": "0644",
       "path": "README.md",
-      "sha256": "e69022cd22fcad58b0848d9af89a14cf43b4ea64475daa96000987b4abf1e530"
+      "sha256": "a419ad07e6f7db068aaee8ee2be6223c61efff257903a0e451b01d6e08c90a71"
     },
     {
       "kind": "payload",
       "mode": "0644",
       "path": "RELEASE-METADATA.json",
-      "sha256": "c4d69e619af45c85a8e10d8908636b813ee30f84b5cd6b6541f4b09c0321b0d9"
+      "sha256": "6878bb1ed957a569a10be304cf3ca291212e67c84aa8e60898daafade688fd8e"
     },
     {
       "kind": "payload",
@@ -888,7 +888,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "version.txt",
-      "sha256": "8c54bfab7f1ae9bd1a7148eae41e7b0a8f4ad3726e0cac70f823a2d45db9e60c"
+      "sha256": "51c18dc8694861beb47a67894e61044864214435389f6d3a274704d9566ff96c"
     }
   ],
   "portmaster": {

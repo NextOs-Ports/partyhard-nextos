@@ -174,6 +174,8 @@ grep -Fq 'if (setenv("GC_DISABLE_INCREMENTAL", "1", 1) != 0)' \
 grep -Fq 'if (setenv("SDL_GAMECONTROLLER_USE_BUTTON_LABELS", "0", 1) != 0)' \
   "$PORT_DIR/src/contract.c" ||
   fail "positional SDL controller labels are not authoritative"
+python3 "$PORT_DIR/tests/test_input_release_contract.py" ||
+  fail "input release contract regressed"
 
 OBJS=()
 index=0
@@ -290,7 +292,8 @@ done
 # V5 controls/video identity (nxrelease closes the same contract).
 for literal in nxinput-gptk-runtime/4 nxinput-gptk4-bridge/1 \
                nxinput-gptk-event-evidence/1 NXC6-PROVIDER NXC6-DOMAIN \
-               NX-VIDEO/1 /usr/lib/gamecontrollerdb.txt; do
+               NX-VIDEO/1 /usr/lib/gamecontrollerdb.txt \
+               SDL_JoystickPathForIndex policy=neutral-only; do
   [[ $(strings "$OUTPUT_PATH" | grep -Fc "$literal") -gt 0 ]] ||
     fail "runtime lacks required live-controls identity: $literal"
 done
@@ -312,7 +315,9 @@ for symbol in nxinput_gptk_live_seal nxinput_gptk_live_feed \
     fail "runtime does not export required live-controls symbol: $symbol"
 done
 if [[ $ST_BENCH_BUILD != 1 ]]; then
-  for literal in /tmp/st-vpad '[st/vpad]' ST_VPAD ST_INPUT_DIAG /tmp/bcgp /tmp/bcshot; do
+  for literal in /tmp/st-vpad '[st/vpad]' ST_VPAD ST_INPUT_DIAG \
+                 ST_INPUT_ENGINE_PROBE ST_INPUT_STALE_BUTTON \
+                 ST_INPUT_STALE_AXIS /tmp/bcgp /tmp/bcshot; do
     if [[ $(strings "$OUTPUT_PATH" | grep -Fc -- "$literal") -gt 0 ]]; then
       fail "bench-only injection path present in the public ELF: $literal"
     fi
