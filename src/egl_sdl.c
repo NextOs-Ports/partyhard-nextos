@@ -687,6 +687,10 @@ EGLBoolean st_sdl_swap_buffers(EGLDisplay display, EGLSurface handle)
         nx_die("live GLES/ESSL100 graphics post-present contract failed");
     st_stretch_after_present();
     frame_count++;
+    if (frame_count >= 30) {
+        extern void st_health_publish_once(void);
+        st_health_publish_once();
+    }
     if (frame_count <= 3 || frame_count % 600 == 0)
         nx_log("SDL page flip #%u", frame_count);
     return EGL_TRUE;

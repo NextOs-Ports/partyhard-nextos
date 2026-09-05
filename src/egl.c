@@ -3049,7 +3049,12 @@ static EGLBoolean my_eglSwapBuffers(EGLDisplay display, EGLSurface surface)
      * prova amostra depois deles e imediatamente antes do swap real.  Zero
      * cai no viewport corrente dentro do adapter canonico. */
     nxgl_frame_proof_before_present(width, height);
-    return p_eglSwapBuffers(display, surface);
+    EGLBoolean presented = p_eglSwapBuffers(display, surface);
+    if (presented == EGL_TRUE && st_swap_count >= 30) {
+        extern void st_health_publish_once(void);
+        st_health_publish_once();
+    }
+    return presented;
 }
 
 static void *my_eglGetProcAddress(const char *name)

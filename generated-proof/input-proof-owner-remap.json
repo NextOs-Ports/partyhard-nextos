@@ -1,7 +1,7 @@
 {
  "schema": "nx-device-input-proof-roteiro/1",
  "port_id": "partyhard",
- "generated_by": "nxgenerator 0.3.17",
+ "generated_by": "nxgenerator 0.4.5",
  "classification": "ON_DEVICE_AUTOMATED_INPUT_PROOF",
  "session": "owner-remap",
  "purpose": "owner copy with A = null and L2 = partyhard.action1 in [gameplay]: same ELF, edited file reaches the engine",

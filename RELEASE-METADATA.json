@@ -17,7 +17,7 @@
     "nxinput": "0.11.8",
     "nxrelease": "0.4.11",
     "nxsplash": "0.1.2",
-    "release_status": "Framework V5 unchanged; port-local single-route D-pad, SOCD limiter and exact-device neutral release guard",
+    "release_status": "Framework V5 unchanged; port-local single-route D-pad, SOCD limiter, exact-device neutral release guard and run-bound health after real presents",
     "splash_duration_ms": 5000
   },
   "game": {
@@ -32,10 +32,10 @@
   "port_version": "1.0.6",
   "runtime": {
     "architecture": "aarch64",
-    "build_id": "866f4b07f6edeeb6d95d328a1e294bee34d8649b",
+    "build_id": "a04d2a3b8b4d663046cb5484a92296d1114ad201",
     "display_policy": "auto-stretch; owner preserve opt-in",
     "executable": "partyhard-nextos",
-    "executable_sha256": "08a9f52622f6471d74e8fe46980380e62bc0d14c34f79b588c8a0866ce9d6f24",
+    "executable_sha256": "f937b377e6339570bc18713f07266d4ce83a19f35d11e3d7e5cae62df19709ad",
     "executable_size": 605664,
     "framebuffer_sample": "immediately-before-present",
     "graphics_evidence_boundary": "post-first-present",

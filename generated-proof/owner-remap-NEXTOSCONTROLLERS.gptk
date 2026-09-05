@@ -9,47 +9,73 @@
 # port's adapter-contract.json. This file is YOURS: port updates never
 # overwrite your edited copy.
 
-format = NEXTOS_CONTROLLERS/3
+format = NEXTOS_CONTROLLERS/4
 port = partyhard
 
-FACE_LAYOUT = auto
+CONTROL_STANDARD = xbox
+GLYPH_STYLE = xbox
+AUTHORITY = nextos
+CONTEXT_POLICY = unified
 
-[menu]
-A = partyhard.action1
-B = partyhard.action2
-X = partyhard.action3
-Y = partyhard.action4
-L1 = partyhard.bumper_left
-R1 = partyhard.bumper_right
-L2 = native
-R2 = native
-L3 = native
-R3 = partyhard.click
-START = partyhard.pause
-SELECT = native
-UP = native
-DOWN = native
-LEFT = native
-RIGHT = native
-LEFT_STICK = partyhard.move
-RIGHT_STICK = partyhard.cursor
-
-[gameplay]
+# Positional Xbox surface: A = south, B = east, X = west, Y = north.
+# One base map for title/menu/gameplay; [override.*] only where the game proved a screen diverges.
+[base]
 A = null
-B = partyhard.action2
-X = partyhard.action3
-Y = partyhard.action4
-L1 = partyhard.bumper_left
-R1 = partyhard.bumper_right
-L2 = partyhard.action1
-R2 = native
+B = action:partyhard.action2
+X = action:partyhard.action3
+Y = action:partyhard.action4
+L1 = action:partyhard.bumper_left
+R1 = action:partyhard.bumper_right
 L3 = native
-R3 = partyhard.click
-START = partyhard.pause
+R3 = native
+START = action:partyhard.pause
 SELECT = native
+GUIDE = native
 UP = native
 DOWN = native
 LEFT = native
 RIGHT = native
-LEFT_STICK = partyhard.move
-RIGHT_STICK = partyhard.cursor
+
+[override.menu]
+A = action:partyhard.action1
+R3 = action:partyhard.click
+stick.right.vector = action:partyhard.cursor
+trigger.left.digital = native
+
+[stick.left]
+mode = vector
+vector = action:partyhard.move
+up = null
+down = null
+left = null
+right = null
+enter_threshold = 0.55
+exit_threshold = 0.40
+diagonal = 8way
+tie_break = horizontal
+
+[stick.right]
+mode = vector
+vector = native
+up = null
+down = null
+left = null
+right = null
+enter_threshold = 0.55
+exit_threshold = 0.40
+diagonal = 8way
+tie_break = horizontal
+
+[trigger.left]
+mode = digital
+analog = null
+digital = action:partyhard.action1
+enter_threshold = 0.55
+exit_threshold = 0.40
+
+[trigger.right]
+mode = analog
+analog = native
+digital = null
+enter_threshold = 0.55
+exit_threshold = 0.40

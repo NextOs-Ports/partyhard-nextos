@@ -176,6 +176,8 @@ grep -Fq 'if (setenv("SDL_GAMECONTROLLER_USE_BUTTON_LABELS", "0", 1) != 0)' \
   fail "positional SDL controller labels are not authoritative"
 python3 "$PORT_DIR/tests/test_input_release_contract.py" ||
   fail "input release contract regressed"
+python3 "$PORT_DIR/tests/test_health_receipt.py" ||
+  fail "run-bound health receipt contract regressed"
 
 OBJS=()
 index=0
@@ -285,6 +287,7 @@ for symbol in nxgl_frame_proof_before_present nxgl_frame_proof_publish \
 done
 for literal in NXBOOTSTRAP_VIDEO_FILE org.nextos.nxruntime.video-proof \
                VIDEO-PROOF: GRAPHICS-EVIDENCE: nx-graphics-evidence \
+               NXBOOTSTRAP_HEALTH_FILE NXBOOTSTRAP_HEALTH_RUN_ID \
                'Party Hard GO public release requires a connected controller'; do
   grep -Fq "$literal" < <(strings "$OUTPUT_PATH") ||
     fail "runtime lacks required video-proof literal: $literal"

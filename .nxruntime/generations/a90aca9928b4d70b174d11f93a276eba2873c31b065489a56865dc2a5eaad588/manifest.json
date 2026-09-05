@@ -4,19 +4,19 @@
       "mode": "0755",
       "path": "Party Hard GO.sh",
       "role": "launcher",
-      "sha256": "762797fb54b33e0a496989db8a0ac15de4659171c617631d9f9032d89e227ca3"
+      "sha256": "b1b29b8e58ac59f6428d114cb05e53a1c4d94e802c770c03428eda44aff1016c"
     },
     {
       "mode": "0644",
       "path": "nxport.json",
       "role": "nxport",
-      "sha256": "8e3b2a66ef7f8a75291630511857c2e3ab550365835a6aa93469412cecd2576b"
+      "sha256": "8e00d10d465ce896d72abc8ecd1fe57fb8a88bbc2a2be0d676cd8dc69d32064a"
     },
     {
       "mode": "0755",
       "path": "partyhard-nextos",
       "role": "executable",
-      "sha256": "08a9f52622f6471d74e8fe46980380e62bc0d14c34f79b588c8a0866ce9d6f24"
+      "sha256": "f937b377e6339570bc18713f07266d4ce83a19f35d11e3d7e5cae62df19709ad"
     },
     {
       "mode": "0644",
@@ -571,7 +571,7 @@
       "sha256": "d85d896a906a778c9af250e5617d45d085a98b18552cb0254addbbc626036c97"
     }
   ],
-  "generation_id": "d9d9517ea75d9a801b9d15ca25a4385363ac72dcf6b67f58ad495c19c48bb019",
+  "generation_id": "a90aca9928b4d70b174d11f93a276eba2873c31b065489a56865dc2a5eaad588",
   "identity_basis": {
     "components": [
       {
@@ -584,13 +584,13 @@
         "mode": "0644",
         "path": "nxport.json",
         "role": "nxport",
-        "sha256": "8e3b2a66ef7f8a75291630511857c2e3ab550365835a6aa93469412cecd2576b"
+        "sha256": "8e00d10d465ce896d72abc8ecd1fe57fb8a88bbc2a2be0d676cd8dc69d32064a"
       },
       {
         "mode": "0755",
         "path": "partyhard-nextos",
         "role": "executable",
-        "sha256": "08a9f52622f6471d74e8fe46980380e62bc0d14c34f79b588c8a0866ce9d6f24"
+        "sha256": "f937b377e6339570bc18713f07266d4ce83a19f35d11e3d7e5cae62df19709ad"
       },
       {
         "mode": "0644",
@@ -1151,13 +1151,13 @@
       "launcher_template_sha256": "c276bfac69667fc9fa649d0ad24f65c0b5e4a268bcaa9fe891582c3bb65aed0b",
       "version": "0.8.4"
     },
-    "nxport_sha256": "8e3b2a66ef7f8a75291630511857c2e3ab550365835a6aa93469412cecd2576b",
+    "nxport_sha256": "8e00d10d465ce896d72abc8ecd1fe57fb8a88bbc2a2be0d676cd8dc69d32064a",
     "nxsplash": {
       "architecture": "aarch64",
       "sha256": "d85d896a906a778c9af250e5617d45d085a98b18552cb0254addbbc626036c97",
       "version": "0.1.2"
     },
-    "runtime_records_sha256": "a82a7bbd3d2cd1f816f44e93b80d7fe7b9168f076490b83baeb109089b218b06",
+    "runtime_records_sha256": "e4cf65b60086a5269dbec4432bfd17e1d845fe80c89fa3b2fabe0580f6b2a4f6",
     "schema": "org.nextos.nxruntime.generation-identity",
     "schema_version": 2
   },

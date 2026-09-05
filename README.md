@@ -34,6 +34,8 @@ assets.
   to the real GLES2 context; the graphics contract requires GLES 2.0 with
   ESSL 1.00, samples the framebuffer immediately before present and promotes
   graphics evidence only after the first real present returns.
+- Promotes a pending nxbootstrap generation only after 30 successful real page
+  flips, using the launcher's exact atomic run-bound health receipt.
 - Adds the V5 owner video policy without touching Unity's renderer: `auto`
   fills every panel by default, while `preserve` keeps the internal 16:9
   image centered (for example 720x405 on a 720x720 display).
@@ -194,6 +196,7 @@ this source-stage validation.
   Android and JNI compatibility.
 - `src/egl.c`, `src/egl_sdl.c`, `src/gles3.c`, `src/unity6_shader.c`: EGL/GLES
   facade, GLES3→GLES2 bridge and presentation.
+- `src/health.c`: run-bound generation health after real presentation.
 - `src/nxgl_frame_proof_adapter.c`, `src/st_graphics_contract.c` and the
   canonical `src/nxgl_graphics_*`: framebuffer proof and graphics contract.
 - `src/audio.c`, `src/opensles_shim.c`: FMOD/PCM output.
@@ -237,6 +240,8 @@ extração, nunca o APK, módulos Android nativos ou assets da tinyBuild.
   contexto GLES2 real; o contrato gráfico exige GLES 2.0 com ESSL 1.00,
   amostra o framebuffer imediatamente antes do present e só promove a
   evidência depois do primeiro present real.
+- Promove uma geração pendente do nxbootstrap somente após 30 page flips reais
+  concluídos, usando o receipt run-bound atômico e exato do launcher.
 - Acrescenta a política de vídeo V5 sem alterar o renderer da Unity: `auto`
   preenche qualquer painel por padrão e `preserve` mantém a imagem 16:9
   centralizada (720x405 numa tela 720x720).
