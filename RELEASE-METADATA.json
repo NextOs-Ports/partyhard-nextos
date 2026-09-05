@@ -2,8 +2,10 @@
   "extraction": {
     "expected_payload_bytes": 459602480,
     "expected_payload_files": 23,
+    "hook_memory_limit_bytes": 134217728,
     "loose_files_from_asset_pack": 7,
-    "mode": "owner-provided APK, transactional on-device extraction"
+    "mode": "owner-provided APK, transactional on-device extraction",
+    "preparation": "streaming UnityFS block extraction"
   },
   "framework": {
     "commit": "275a8fb47c2f2bf9a452734dec5c33ceb4bd549f",
@@ -27,7 +29,7 @@
     "version": "0.100038"
   },
   "port_id": "partyhard",
-  "port_version": "1.0.1",
+  "port_version": "1.0.2",
   "runtime": {
     "architecture": "aarch64",
     "build_id": "b89955680da653b6e20a5f7646f02637d166a1cd",

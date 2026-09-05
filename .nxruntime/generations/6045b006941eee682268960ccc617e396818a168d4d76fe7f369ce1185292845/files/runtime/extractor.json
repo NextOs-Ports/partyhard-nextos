@@ -246,7 +246,7 @@
       "limits": {
         "wall_seconds": 1800,
         "cpu_seconds": 1800,
-        "memory_bytes": 805306368,
+        "memory_bytes": 134217728,
         "fsize_bytes": 2147483648,
         "output_bytes": 4194304
       },

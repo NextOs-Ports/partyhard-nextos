@@ -26,7 +26,7 @@
       "mode": "0644",
       "path": "extractor.json",
       "role": "nxextract-recipe",
-      "sha256": "ed6c858bf145e8451e8f060998777c15d4f7bcef1c3bbb3b0dcaef0d9550470f"
+      "sha256": "616ddbccb8c055c4e99a13bb5d72fc1375f15c9a5f7c624a322ee6de87cd961b"
     },
     {
       "mode": "0644",
@@ -56,7 +56,7 @@
       "mode": "0644",
       "path": "nxextract/prepare_partyhard_data.py",
       "role": "nxextract-helper",
-      "sha256": "966dda679b2bcd9adc9d5e417e64ab27bd56582755ac194eb6b1d1b2dd624b0e"
+      "sha256": "c6ab36a7103eab6e33b2a53ea6529bc903c93ddf87bb26f85efae8a63da8e91a"
     },
     {
       "mode": "0644",

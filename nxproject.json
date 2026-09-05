@@ -233,7 +233,7 @@
         "mode": "0644",
         "path": "extractor.json",
         "role": "nxextract-recipe",
-        "sha256": "ed6c858bf145e8451e8f060998777c15d4f7bcef1c3bbb3b0dcaef0d9550470f"
+        "sha256": "616ddbccb8c055c4e99a13bb5d72fc1375f15c9a5f7c624a322ee6de87cd961b"
       },
       {
         "mode": "0644",
@@ -263,7 +263,7 @@
         "mode": "0644",
         "path": "nxextract/prepare_partyhard_data.py",
         "role": "nxextract-helper",
-        "sha256": "966dda679b2bcd9adc9d5e417e64ab27bd56582755ac194eb6b1d1b2dd624b0e"
+        "sha256": "c6ab36a7103eab6e33b2a53ea6529bc903c93ddf87bb26f85efae8a63da8e91a"
       },
       {
         "mode": "0644",
@@ -870,7 +870,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "RELEASE-METADATA.json",
-      "sha256": "cad228a071a92fa5545596e20da6ad40c51bdcfc37109532788e6927eb2b6a53"
+      "sha256": "d8622e647e120267092a65f7a276e458c58abb98950578b073c90b69090eba42"
     },
     {
       "kind": "payload",
@@ -888,7 +888,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "version.txt",
-      "sha256": "44e161e4495cac2cf7858043e9e6418e9579f0ddcfae826f9a372622968ce066"
+      "sha256": "9fd28642d3aca191e5c7fc2383cfd6fabb2aac8743f029dabb8989ac584e31bc"
     }
   ],
   "portmaster": {
