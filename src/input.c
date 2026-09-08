@@ -121,10 +121,6 @@ static int bench_stale_axis = -1;
 #endif
 static void *input_last_env;
 static void *input_last_player;
-static int touch_origin_x;
-static int touch_origin_y;
-static int touch_width = 1280;
-static int touch_height = 720;
 
 /* SIGTERM/SIGINT convergem no mesmo shutdown do SELECT+START. */
 void st_input_request_exit(void)
@@ -1447,14 +1443,8 @@ static void update_cursor(void *env, void *player)
     int down = held && !cursor_click_prev;
     int up = !held && cursor_click_prev;
     cursor_click_prev = held;
-    /* MotionEvent usa coordenadas da view/painel, não as dimensões do FBO
-     * interno.  A mesma transformação que desenha a seta precisa governar o
-     * toque; caso contrário preserve desloca o clique pelas barras e stretch
-     * muda sua escala em painéis 4:3/1:1. */
-    float touch_x = (float)touch_origin_x +
-                    cursor_x * (float)touch_width / 1280.0f;
-    float touch_y = (float)touch_origin_y +
-                    cursor_y * (float)touch_height / 720.0f;
+    float touch_x, touch_y;
+    st_window_cursor_to_touch(cursor_x, cursor_y, &touch_x, &touch_y);
     if (down) {
         inject(env, player, st_jni_touch_event(0, touch_x, touch_y));
         cursor_first_click_done = 1;
@@ -2535,16 +2525,6 @@ visible:
     if (x) *x = cursor_x;
     if (y) *y = cursor_y;
     return 1;
-}
-
-void st_input_set_touch_rect(int x, int y, int width, int height)
-{
-    if (width <= 0 || height <= 0)
-        return;
-    touch_origin_x = x;
-    touch_origin_y = y;
-    touch_width = width;
-    touch_height = height;
 }
 
 void st_input_keyboard_open(const char *initial, int character_limit)

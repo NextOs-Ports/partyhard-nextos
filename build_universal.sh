@@ -180,6 +180,8 @@ python3 "$PORT_DIR/tests/test_health_receipt.py" ||
   fail "run-bound health receipt contract regressed"
 python3 "$PORT_DIR/tests/test_key_event_payload.py" ||
   fail "per-event KeyEvent payload contract regressed"
+python3 "$PORT_DIR/tests/test_cursor_window.py" ||
+  fail "cursor/native-window coordinates regressed"
 
 OBJS=()
 index=0

@@ -1265,16 +1265,8 @@ static void draw_gamepad_cursor(void)
     int height = viewport[3];
     if (width <= 0 || height <= 0)
         return;
-    /* Desenho e MotionEvent compartilham exatamente o mesmo retângulo final
-     * no painel. Isso mantém o clique sob a ponta da seta em stretch,
-     * preserve e em qualquer resolução/proporção. */
-    float rect_x0 = 0.f, rect_y0 = 0.f, rect_x1 = (float)width,
-          rect_y1 = (float)height;
-    st_stretch_logical_to_panel(0.f, 0.f, &rect_x0, &rect_y0);
-    st_stretch_logical_to_panel(1280.f, 720.f, &rect_x1, &rect_y1);
-    st_input_set_touch_rect((int)rect_x0, (int)rect_y0,
-                            (int)(rect_x1 - rect_x0),
-                            (int)(rect_y1 - rect_y0));
+    /* Presentation maps the content point to the panel. Android input uses
+     * ANativeWindow coordinates and must not inherit these bars or scaling. */
     float panel_x = cursor_x, panel_y = cursor_y;
     st_stretch_logical_to_panel(cursor_x, cursor_y, &panel_x, &panel_y);
     int x = viewport[0] + (int)panel_x;

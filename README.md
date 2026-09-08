@@ -4,6 +4,13 @@
 
 ## English
 
+**1.0.8-rc1 is a test candidate; physical validation is pending.** It fixes
+cursor coordinates in the Android window space used by Unity and prevents the
+dArkOS startup E2BIG when PortMaster supplies a full controller database.
+The right stick/R3 menu pointer and native gameplay controls are preserved.
+See [TESTING.md](TESTING.md) for installation, checks and reporting.
+
+
 Version 1.0.7 fixes the D-pad diagonal that kept the character walking after
 UP+LEFT or UP+RIGHT were released together. The cause was in the port's JNI
 shim: Unity reads an injected Android KeyEvent after `nativeInjectEvent`
@@ -110,9 +117,10 @@ The TOUCH/VIRTUAL popup requires the pointer and R3. This corrected default
 does not overwrite an edited owner map; remove its menu A-click override to
 adopt native confirmation on an existing installation.
 The arrow starts visible, returns when moved or clicked, and hides after four
-idle seconds following its first click. The pointer and Android MotionEvent
-share the exact final content rectangle, so the click stays under the arrow
-with bars or stretching on any aspect ratio. D-pad navigation uses one
+idle seconds following its first click. The arrow maps the game content to the presentation rectangle. MotionEvent
+uses the same content point scaled to ANativeWindow; Unity then normalizes it
+to its rendering resolution. Bars and panel stretching do not enter the input
+coordinates. This path was verified locally; physical confirmation is pending. D-pad navigation uses one
 KeyEvent route in both menu and gameplay; the duplicate HAT route remains
 neutral. Simultaneous opposite directions cancel only the contradictory pair,
 so the reported LEFT+RIGHT+DOWN+action chord retains DOWN+action without an
@@ -154,8 +162,22 @@ identity and full directory layout.
 
 ### Build and release composition
 
+The candidate opts into `nxbootstrap-v0.8.5-rc1` and
+`nxrelease-v0.4.12-rc1`. Other components keep their immutable V5 commits.
+The new launcher reuses an identical regular PortMaster database when the
+mapping exceeds 65536 bytes; short inline overrides retain their priority.
+SDL's native file loader applies its platform filter. Missing or divergent
+large databases fail with a controller transport diagnostic.
+
+Set `NEXTOS_SYSROOT` to the pinned API-header sysroot and build with
+`build_universal.sh`. Freeze the new executable and its metadata/pins in Git,
+then run `NEXTOS_FRAMEWORK_REPO=/path/to/framework-repository
+./package/build-package.sh /path/to/new-candidate-directory`. This creates a
+single candidate from the pinned framework snapshot. It never tests a device
+or publishes a release. Keep the output and hash immutable for external tests.
+
+
 ```bash
-cd ports/partyhard
 ./build_universal.sh
 ```
 
@@ -219,6 +241,13 @@ game content remain copyright tinyBuild / Pinokl Games and their rights
 holders.
 
 ## Português
+
+**1.0.8-rc1 é um candidato de testes, com validação física pendente.** Corrige
+as coordenadas do cursor no espaço da janela Android usado pela Unity e evita
+E2BIG na abertura em dArkOS quando o PortMaster fornece seu banco completo.
+Preserva o ponteiro no direito/R3 em menus e os controles nativos no gameplay.
+Veja [TESTING.md](TESTING.md) para instalação, verificações e retorno.
+
 
 A versão 1.0.7 corrige a diagonal do direcional que deixava o personagem
 andando depois de soltar CIMA+ESQUERDA ou CIMA+DIREITA juntos. A causa estava
@@ -312,9 +341,10 @@ A janela TOUCH/VIRTUAL exige seta e R3. O padrão corrigido não sobrescreve
 mapas editados pelo dono; numa instalação existente, remova o override de
 clique do A em menu para adotar a confirmação nativa.
 A seta nasce visível, reaparece ao ser usada e some após quatro
-segundos parada depois do primeiro clique. A seta e o MotionEvent Android usam
-o mesmo retângulo final de conteúdo, mantendo o clique sob a ponta tanto com
-barras quanto esticado, em qualquer proporção. O D-pad usa uma única rota
+segundos parada depois do primeiro clique. A seta leva o ponto do jogo ao retângulo de apresentação. O MotionEvent leva
+o mesmo ponto ao ANativeWindow, que a Unity normaliza para sua resolução de
+renderização. Barras e esticamento do painel não entram nas coordenadas de
+entrada. A correção passou nos testes locais e aguarda confirmação física. O D-pad usa uma única rota
 KeyEvent no menu e no gameplay; a rota HAT duplicada fica neutra. Direções
 opostas simultâneas cancelam somente o par contraditório: no caso relatado
 LEFT+RIGHT+DOWN+ação, DOWN+ação continuam válidos sem o estado horizontal

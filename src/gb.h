@@ -82,9 +82,9 @@ void st_input_request_exit(void);
 /* Right-stick pointer, in 1280x720 top-left coordinates.  EGL reads the
  * snapshot on the render thread immediately before swap. */
 int st_input_cursor(float *x, float *y);
-/* EGL publishes the exact viewport used to draw that cursor.  Input then
- * maps the same 1280x720 design point into Unity's physical pointer space. */
-void st_input_set_touch_rect(int x, int y, int width, int height);
+/* Convert a content point to the ANativeWindow space consumed by Unity's
+ * MotionEvent normalization, independently of the presentation viewport. */
+void st_window_cursor_to_touch(float x, float y, float *touch_x, float *touch_y);
 
 enum {
     ST_KEY_CHARACTER,

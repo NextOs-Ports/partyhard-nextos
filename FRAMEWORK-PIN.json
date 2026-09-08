@@ -16,9 +16,9 @@
       "version": "0.4.0"
     },
     "nxbootstrap": {
-      "commit": "657fb65a23b5c3b20040e76307b27e6470b1d17c",
-      "tree_sha256": "be3002ac71e20cc4ad819c4d7b061514a65bc33e87f0beebfe443fa9a3ffc989",
-      "version": "0.8.4"
+      "commit": "fad53ffb9c546385d9c3845d53cad014aa908867",
+      "tree_sha256": "9a0147565dab71b3359de3d3ef4c382f27ab2fdab4f0497597e769e40087f3ad",
+      "version": "0.8.5"
     },
     "nxcompat": {
       "commit": "657fb65a23b5c3b20040e76307b27e6470b1d17c",
@@ -56,9 +56,9 @@
       "version": "0.4.5"
     },
     "nxrelease": {
-      "commit": "657fb65a23b5c3b20040e76307b27e6470b1d17c",
-      "tree_sha256": "739e87e3eecd44189175c7da40c8392aeb83af02f3cde19dc8d026c6a467dda4",
-      "version": "0.4.11"
+      "commit": "1b37d6f62de30cd0179e97b0cb00ec8138ed6248",
+      "tree_sha256": "513b3b9445041ca5f99b73adec5b353c1bc3380437c79ee1c0dfcd4f8c3f083e",
+      "version": "0.4.12"
     },
     "nxsplash": {
       "commit": "657fb65a23b5c3b20040e76307b27e6470b1d17c",

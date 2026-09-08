@@ -64,6 +64,18 @@ void st_window_set_size(int w, int h)
 
 void *st_window_handle(void) { return &the_window; }
 
+void st_window_cursor_to_touch(float x, float y, float *touch_x, float *touch_y)
+{
+    /* Unity normalizes MotionEvent by render-size / ANativeWindow-size.
+     * The cursor is already a point inside the game's 1280x720 content:
+     * convert it to that window, before Unity's normalization. Panel stretch
+     * and letterbox offsets belong only to presentation, not Android input.
+     * Use the same dimensions the ANativeWindow getters expose, including
+     * fromSurface/setBuffersGeometry updates; fb0 need not match the panel. */
+    if (touch_x) *touch_x = x * (float)the_window.width / 1280.0f;
+    if (touch_y) *touch_y = y * (float)the_window.height / 720.0f;
+}
+
 /* Mali's fbdev EGLNativeWindowType is a two-u16 width/height record. */
 void *st_native_window(void)
 {

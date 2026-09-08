@@ -872,7 +872,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "FRAMEWORK-PIN.json",
-      "sha256": "60e9219557bdd9313b611104ba3efa4a975c4b2f06661b3b8e58a51024afe758"
+      "sha256": "ef0e4501ac568dfe3b7ee7b2a21f7680223a6d42ebce0c216f972717fe19c962"
     },
     {
       "kind": "payload",
@@ -902,13 +902,19 @@
       "kind": "payload",
       "mode": "0644",
       "path": "README.md",
-      "sha256": "29ab3ed55ffa35b92285e0bbf058afbb8efa386320814be8d20bd4be404c3661"
+      "sha256": "c6957a050750f7fc12c421b7d8441262d82060eccd1572c0dc904f3f114abd02"
     },
     {
       "kind": "payload",
       "mode": "0644",
       "path": "RELEASE-METADATA.json",
-      "sha256": "9858109c28b9d6c4c356d309f92b8c7579b7fdf3547e810887c2750d112e908a"
+      "sha256": "386960ee41073fdcfc3db06e62804ad39f039260ca6709d0191b55336205ddf9"
+    },
+    {
+      "kind": "payload",
+      "mode": "0644",
+      "path": "TESTING.md",
+      "sha256": "e9129fb81dacba149c7dcbeeaaa1a4653cf9ac4fb1d28a38cc7d8fa9e749f37a"
     },
     {
       "kind": "payload",
@@ -926,7 +932,7 @@
       "kind": "payload",
       "mode": "0644",
       "path": "version.txt",
-      "sha256": "6d6b9230dd8b8aac527f8929b7c2fc1fa0365deccca856216de979d6f5c6a6fe"
+      "sha256": "98348d11b7ab5338933d4dad3a0c00bec3cc30dba86bbc4e2b0208f1c2213f63"
     }
   ],
   "portmaster": {
