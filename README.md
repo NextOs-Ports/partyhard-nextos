@@ -171,9 +171,18 @@ large databases fail with a controller transport diagnostic.
 
 Set `NEXTOS_SYSROOT` to the pinned API-header sysroot and build with
 `build_universal.sh`. Freeze the new executable and its metadata/pins in Git,
-then run `NEXTOS_FRAMEWORK_REPO=/path/to/framework-repository
-./package/build-package.sh /path/to/new-candidate-directory`. This creates a
-single candidate from the pinned framework snapshot. It never tests a device
+then set `NEXTOS_FRAMEWORK_REPO` to the framework Git repository and run:
+
+```bash
+./package/build-package.sh prepare /path/to/new-candidate-directory
+# Review/copy generated/Party Hard GO.sh, generated/nxrelease.json and
+# generated/partyhard/* (including dotfiles) into the flat source checkout.
+# Commit the generated deployment bytes, preserving authored source files.
+./package/build-package.sh bundle /path/to/new-candidate-directory
+```
+
+The prepare phase creates no ZIP. The bundle phase checks the frozen source
+against the generated deployment and creates a single candidate. It never tests a device
 or publishes a release. Keep the output and hash immutable for external tests.
 
 

@@ -3,6 +3,12 @@
     "executable_sha256": "bb3e448476db83c918dd6e8183c3f08fbecebe5055104134c5102968d8e9a8ff",
     "port_version": "1.0.7"
   },
+  "build": {
+    "identical_builds": 2,
+    "recipe": "build_universal.sh",
+    "reproducible": true,
+    "source_commit": "be435cfb00d7643c01d4211ec9dab04b0329250d"
+  },
   "extraction": {
     "expected_payload_bytes": 459602480,
     "expected_payload_files": 23,
@@ -13,6 +19,18 @@
   },
   "framework": {
     "base_commit": "657fb65a23b5c3b20040e76307b27e6470b1d17c",
+    "candidate_components": {
+      "nxbootstrap": {
+        "commit": "fad53ffb9c546385d9c3845d53cad014aa908867",
+        "tree_sha256": "9a0147565dab71b3359de3d3ef4c382f27ab2fdab4f0497597e769e40087f3ad",
+        "version": "0.8.5"
+      },
+      "nxrelease": {
+        "commit": "1b37d6f62de30cd0179e97b0cb00ec8138ed6248",
+        "tree_sha256": "513b3b9445041ca5f99b73adec5b353c1bc3380437c79ee1c0dfcd4f8c3f083e",
+        "version": "0.4.12"
+      }
+    },
     "candidate_tags": [
       "nxbootstrap-v0.8.5-rc1",
       "nxrelease-v0.4.12-rc1"
@@ -40,11 +58,11 @@
   "port_version": "1.0.8-rc1",
   "runtime": {
     "architecture": "aarch64",
-    "build_id": "cf097882a93ec6d7ba797c534ba3540cac0085c7",
+    "build_id": "3e2f372e9dbf6f0156d09c6755ae397e1e1f702a",
     "display_policy": "auto-stretch; owner preserve opt-in",
     "executable": "partyhard-nextos",
-    "executable_sha256": "bb3e448476db83c918dd6e8183c3f08fbecebe5055104134c5102968d8e9a8ff",
-    "executable_size": 609760,
+    "executable_sha256": "806efcd0ec83dcf246cfc4870f2758b6ad2696ba3516916dd0fa22b48bfd7c21",
+    "executable_size": 605648,
     "framebuffer_sample": "immediately-before-present",
     "graphics_evidence_boundary": "post-first-present",
     "max_glibc": "2.27",

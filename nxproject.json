@@ -253,7 +253,7 @@
         "mode": "0755",
         "path": "partyhard-nextos",
         "role": "executable",
-        "sha256": "bb3e448476db83c918dd6e8183c3f08fbecebe5055104134c5102968d8e9a8ff"
+        "sha256": "806efcd0ec83dcf246cfc4870f2758b6ad2696ba3516916dd0fa22b48bfd7c21"
       },
       {
         "mode": "0644",
@@ -902,13 +902,13 @@
       "kind": "payload",
       "mode": "0644",
       "path": "README.md",
-      "sha256": "c6957a050750f7fc12c421b7d8441262d82060eccd1572c0dc904f3f114abd02"
+      "sha256": "6c9d3fe9cb43fa400bf5e0963f02d9bdfb6e29c665d25cc80d3baa8d140aa92f"
     },
     {
       "kind": "payload",
       "mode": "0644",
       "path": "RELEASE-METADATA.json",
-      "sha256": "386960ee41073fdcfc3db06e62804ad39f039260ca6709d0191b55336205ddf9"
+      "sha256": "ccab9fc1a245d0921f26f9c0933c54c6b729eb43acfb87389d96929a352ebdfb"
     },
     {
       "kind": "payload",
