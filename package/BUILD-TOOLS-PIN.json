@@ -1,0 +1,32 @@
+{
+  "commit": "657fb65a23b5c3b20040e76307b27e6470b1d17c",
+  "component": "apkcompat",
+  "files": [
+    {
+      "path": "framework/contracts/apkcompat/CHANGELOG.md",
+      "sha256": "04e232aa104bace4c3d888710b8ba55f5ab76cd30edf76a29e847508ef64a3f7"
+    },
+    {
+      "path": "framework/contracts/apkcompat/README.md",
+      "sha256": "77e10adc14e1f0af4ca581133d64defe4d8c59071b586f4056db745f452cae50"
+    },
+    {
+      "path": "framework/contracts/apkcompat/REGRESSION-MATRIX.md",
+      "sha256": "2db041555af0f2582e50cc228c2a3588224d001fcea9ce17fdf280a6f3cd491c"
+    },
+    {
+      "path": "framework/contracts/apkcompat/VERSION",
+      "sha256": "1575e1af4a95f12f70b4ee6a6adce8160953d93ea17dc2611b90883ccc3ad3b8"
+    },
+    {
+      "path": "framework/contracts/apkcompat/apkcompat.py",
+      "sha256": "7b7bb6f465d9b0633000f543db3cebe7920e7fc73e9c67e8d218b53dad9d6ba6"
+    },
+    {
+      "path": "framework/contracts/apkcompat/fixtures/apk-compat-cases-v3.json",
+      "sha256": "465e33a201e83549b5d24cef40e93a0afa17d8a64a82a32f8d61fcfd7ee42ca4"
+    }
+  ],
+  "schema": "partyhard-build-tools/1",
+  "version": "1.1.0"
+}

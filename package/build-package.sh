@@ -45,6 +45,22 @@ if phase == 'prepare':
     (destination / 'ATTEMPT.json').write_text(json.dumps(identity, indent=2) + '\n')
     run('python3', repository / 'framework/nxgenerator/framework_pin.py', 'materialize',
         '--repository', repository, '--pin', port / 'FRAMEWORK-PIN.json', '--destination', snapshot)
+    # V5's component snapshot does not include its separate APK contract.
+    # Materialize that unchanged host tool from explicitly pinned Git blobs.
+    tools_pin = json.loads((port / 'package/BUILD-TOOLS-PIN.json').read_text())
+    for entry in tools_pin['files']:
+        relative = Path(entry['path'])
+        if relative.is_absolute() or '..' in relative.parts:
+            raise SystemExit('Unsafe build-tool path')
+        data = subprocess.check_output(['git', '-C', str(repository), 'show',
+                                        tools_pin['commit'] + ':' + relative.as_posix()])
+        if hashlib.sha256(data).hexdigest() != entry['sha256']:
+            raise SystemExit('Build-tool pin mismatch: ' + str(relative))
+        target = snapshot / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open('xb') as stream:
+            stream.write(data)
+        target.chmod(0o644)
     run('python3', framework / 'nxgenerator/nxgenerator.py', port / 'nxproject.json',
         '--source-root', port, '--output', generated)
     run('python3', framework / 'nxrelease/nx-render-manifest.py', '--generator-root', generated,

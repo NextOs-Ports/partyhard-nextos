@@ -163,7 +163,9 @@ identity and full directory layout.
 ### Build and release composition
 
 The candidate opts into `nxbootstrap-v0.8.5-rc1` and
-`nxrelease-v0.4.12-rc1`. Other components keep their immutable V5 commits.
+`nxrelease-v0.4.12-rc1`. Other components keep their immutable V5 commits. The unchanged APK compatibility
+host tool is separately pinned in `package/BUILD-TOOLS-PIN.json` because the
+V5 component snapshot omits that contract directory.
 The new launcher reuses an identical regular PortMaster database when the
 mapping exceeds 65536 bytes; short inline overrides retain their priority.
 SDL's native file loader applies its platform filter. Missing or divergent
